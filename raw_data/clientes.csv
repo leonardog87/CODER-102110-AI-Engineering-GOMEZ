@@ -1,0 +1,81 @@
+﻿Empresa;Nombre_Responsable;Apellido_Responsable;Mail;Telefono;Pais;Ciudad;Servicio_Contratado;Ingreso_Mensual_ARS;Gasto_Mensual_ARS
+Alimentos del Plata;Mariano;López;mariano.lopez@alimentosdelplata.com;+54 11 5234-1122;Argentina;CABA;Infraestructura Gestionada (IaaS);4500000;1500000
+Logística Austral;Florencia;Gómez;florencia.gomez@gmail.com;+54 11 4899-3344;Argentina;CABA;Soporte IT y Mantenimiento;1800000;600000
+TecnoPampa;Juan;Rodríguez;juan.rodriguez@tecnopampa.com;+54 351 421-5566;Argentina;Córdoba;Migración Cloud AWS;6200000;2100000
+Sanatorio Central;Valeria;Fernández;valeria.fernandez@hotmail.com;+54 11 4711-8899;Argentina;CABA;Ciberseguridad y Monitoreo 24/7;7500000;2800000
+Distribuidora Norte;Lucas;Martínez;lucas.martinez@distribuidoranorte.com;+54 351 460-2211;Argentina;Córdoba;Hosting Dedicado y Backup;3100000;1100000
+Bodegas del Sol;Camila;Pérez;camila.perez@gmail.com;+54 261 425-9900;Argentina;Mendoza;Consultoría DevOps y CI/CD;4200000;1400000
+Inversiones Cuyo;Santiago;Sánchez;santiago.sanchez@inversionescuyo.com;+54 261 430-4455;Argentina;Mendoza;Infraestructura Gestionada (IaaS);5100000;1800000
+Metalúrgica Rosario;Sofía;Romero;sofia.romero@hotmail.com;+54 341 422-3377;Argentina;Rosario;Soporte IT y Mantenimiento;1900000;650000
+Construcciones Baires;Matías;García;matias.garcia@construccionesbaires.com;+54 11 4133-2211;Argentina;CABA;Hosting Dedicado y Backup;3400000;1200000
+E-Commerce Litoral;Catalina;Díaz;catalina.diaz@gmail.com;+54 341 480-5544;Argentina;Rosario;Migración Cloud AWS;6800000;2300000
+RegioAbastos;Tomás;Silva;tomas.silva@regioabastos.com;+52 81 8340-1122;México;Monterrey;Infraestructura Gestionada (IaaS);5800000;1900000
+MexiCargo;Isabella;Álvarez;isabella.alvarez@gmail.com;+52 55 5511-3344;México;CDMX;Soporte IT y Mantenimiento;2100000;700000
+Inmobiliaria Anáhuac;Benjamín;Alonso;benjamin.alonso@hotmail.com;+52 55 5622-7788;México;CDMX;Hosting Dedicado y Backup;3600000;1300000
+AztekTech;Martina;Torres;martina.torres@aztektech.com;+52 33 3615-9900;México;Guadalajara;Consultoría DevOps y CI/CD;4600000;1600000
+MayaRetail;Agustín;Gutiérrez;agustin.gutierrez@gmail.com;+52 55 5325-1122;México;CDMX;Ciberseguridad y Monitoreo 24/7;8200000;3100000
+Finanzas Azteca;Emilia;Castro;emilia.castro@finanzasazteca.com;+52 55 5280-4433;México;CDMX;Migración Cloud AWS;7100000;2500000
+TequilaJalisco;Luciano;Morales;luciano.morales@hotmail.com;+52 33 3818-5566;México;Guadalajara;Soporte IT y Mantenimiento;2000000;750000
+MonterreyLogistics;Victoria;Pereira;victoria.pereira@monterreylogistics.com;+52 81 8150-8899;México;Monterrey;Infraestructura Gestionada (IaaS);5400000;1850000
+FarmaMex;Facundo;Herrera;facundo.herrera@gmail.com;+52 55 5400-2211;México;CDMX;Hosting Dedicado y Backup;3900000;1400000
+TextilPuebla;Julieta;Medina;julieta.medina@textilpuebla.com;+52 222 230-4455;México;Puebla;Soporte IT y Mantenimiento;1750000;600000
+CaféAndino;Nicolás;Vargas;nicolas.vargas@cafeandino.com;+57 601 315-8899;Colombia;Bogotá;Infraestructura Gestionada (IaaS);4900000;1650000
+Logística Caribe;Antonella;Rojas;antonella.rojas@gmail.com;+57 605 370-1122;Colombia;Barranquilla;Soporte IT y Mantenimiento;1850000;650000
+ValleSeguros;Jerónimo;Mendoza;jeronimo.mendoza@hotmail.com;+57 602 880-4433;Colombia;Cali;Hosting Dedicado y Backup;3300000;1150000
+AntioquiaTech;Valeria;Cáceres;valeria.caceres@antioquiatech.com;+57 604 250-5566;Colombia;Medellín;Consultoría DevOps y CI/CD;4400000;1500000
+FloresDeColombia;Emmanuel;Benítez;emmanuel.benitez@gmail.com;+57 601 742-1122;Colombia;Bogotá;Ciberseguridad y Monitoreo 24/7;7900000;2900000
+PaisaRetail;Delfina;Ruiz;delfina.ruiz@paisaretail.com;+57 604 311-8899;Colombia;Medellín;Migración Cloud AWS;6900000;2400000
+InversionesBogota;Bautista;Flores;bautista.flores@hotmail.com;+57 601 621-4455;Colombia;Bogotá;Soporte IT y Mantenimiento;2150000;750000
+CaribePharma;Renata;Suarez;renata.suarez@caribepharma.com;+57 605 340-9988;Colombia;Barranquilla;Infraestructura Gestionada (IaaS);5200000;1800000
+OroVerde;Samuel;Salazar;samuel.salazar@gmail.com;+57 604 260-2211;Colombia;Medellín;Hosting Dedicado y Backup;3500000;1250000
+TransCali;Milagros;Jimenez;milagros.jimenez@transcali.com;+57 602 660-5544;Colombia;Cali;Soporte IT y Mantenimiento;1900000;650000
+Minera del Sur;Alejandro;Ortiz;alejandro.ortiz@mineradelsur.com;+56 2 2634-1122;Chile;Santiago;Infraestructura Gestionada (IaaS);6500000;2200000
+AndesLogistics;Ximena;Cruz;ximena.cruz@gmail.com;+56 2 2745-3344;Chile;Santiago;Soporte IT y Mantenimiento;2200000;750000
+SantiagoRetail;Diego;Castillo;diego.castillo@hotmail.com;+56 2 2580-7788;Chile;Santiago;Hosting Dedicado y Backup;3800000;1350000
+ViñaAustral;Fernanda;Reyes;fernanda.reyes@vinaaustral.com;+56 32 221-9900;Chile;Valparaíso;Consultoría DevOps y CI/CD;4800000;1700000
+PesqueraValpo;Leonardo;Rios;leonardo.rios@gmail.com;+56 32 225-1122;Chile;Valparaíso;Ciberseguridad y Monitoreo 24/7;8500000;3200000
+InkaMercado;Mariana;Delgado;mariana.delgado@inkamercado.com;+51 1 421-4433;Perú;Lima;Migración Cloud AWS;7300000;2600000
+LimaConstrucciones;Daniel;Navarro;daniel.navarro@hotmail.com;+51 1 242-8899;Perú;Lima;Soporte IT y Mantenimiento;2050000;700000
+BancaSoles;Paulina;Peralta;paulina.peralta@bancasoles.com;+51 1 444-5566;Perú;Lima;Infraestructura Gestionada (IaaS);5900000;2000000
+AlimentosAndinos;Gabriel;Ibañez;gabriel.ibanez@gmail.com;+51 1 221-2211;Perú;Lima;Hosting Dedicado y Backup;3700000;1300000
+MiFarmaPeru;Natalia;Blanco;natalia.blanco@mifarmaperu.com;+51 1 475-9988;Perú;Lima;Soporte IT y Mantenimiento;1950000;680000
+AtlánticoSeguros;Joaquín;Maldonado;joaquin.maldonado@atlanticoseguros.com;+598 2 901-1122;Uruguay;Montevideo;Infraestructura Gestionada (IaaS);5300000;1750000
+OrientalSoft;Clara;Ortega;clara.ortega@gmail.com;+598 2 400-3344;Uruguay;Montevideo;Consultoría DevOps y CI/CD;4500000;1550000
+FrigoríficoSur;Juan;Acosta;juan.acosta@hotmail.com;+598 2 620-7788;Uruguay;Montevideo;Hosting Dedicado y Backup;3400000;1200000
+PuntaRetail;Juana;Sosa;juana.sosa@puntaretail.com;+598 42 22-9900;Uruguay;Maldonado;Soporte IT y Mantenimiento;1800000;600000
+MaroñasLogistics;Franco;Luna;franco.luna@gmail.com;+598 2 710-1122;Uruguay;Montevideo;Ciberseguridad y Monitoreo 24/7;8100000;3000000
+AgroPlata;Martina;Benítez;martina.benitez@agroplata.com;+54 221 423-9988;Argentina;La Plata;Migración Cloud AWS;6600000;2250000
+MarDelPlataTech;Bruno;Flores;bruno.flores@hotmail.com;+54 223 491-2211;Argentina;Mar del Plata;Soporte IT y Mantenimiento;1900000;650000
+SaltaAlimentos;Thiago;Suarez;thiago.suarez@saltaalimentos.com;+54 387 431-4455;Argentina;Salta;Hosting Dedicado y Backup;3200000;1100000
+NorteDistribuciones;Alma;Salazar;alma.salazar@gmail.com;+54 387 422-9988;Argentina;Salta;Infraestructura Gestionada (IaaS);4800000;1600000
+CostaAtlántica;Mateo;Jimenez;mateo.jimenez@costaatlantica.com;+54 223 495-4455;Argentina;Mar del Plata;Soporte IT y Mantenimiento;1850000;600000
+BairesFinanzas;Valentina;Ortiz;valentina.ortiz@bairesfinanzas.com;+54 11 4325-8899;Argentina;CABA;Ciberseguridad y Monitoreo 24/7;8900000;3300000
+CórdobaMotores;Santiago;Cruz;santiago.cruz@gmail.com;+54 351 488-3344;Argentina;Córdoba;Hosting Dedicado y Backup;3600000;1250000
+AndesVinos;Camila;Castillo;camila.castillo@hotmail.com;+54 261 429-2211;Argentina;Mendoza;Soporte IT y Mantenimiento;2000000;700000
+SantaFeLogística;Lucas;Reyes;lucas.reyes@santafelogistica.com;+54 342 455-1122;Argentina;Santa Fe;Infraestructura Gestionada (IaaS);5100000;1750000
+RosarioGranos;Isabella;Rios;isabella.rios@gmail.com;+54 341 440-9988;Argentina;Rosario;Migración Cloud AWS;7000000;2400000
+PampaSeguros;Matías;Delgado;matias.delgado@pampaseguros.com;+54 11 4515-4433;Argentina;CABA;Hosting Dedicado y Backup;3800000;1300000
+CuyoFrutas;Sofía;Navarro;sofia.navarro@hotmail.com;+54 261 423-1122;Argentina;Mendoza;Soporte IT y Mantenimiento;1850000;600000
+CentralTucumán;Benjamín;Peralta;benjamin.peralta@centraltucuman.com;+54 381 422-8899;Argentina;Tucumán;Consultoría DevOps y CI/CD;4300000;1500000
+LitoralLácteos;Catalina;Ibañez;catalina.ibanez@gmail.com;+54 342 460-4455;Argentina;Santa Fe;Soporte IT y Mantenimiento;1950000;650000
+NOATextil;Tomás;Blanco;tomas.blanco@noatextil.com;+54 381 430-1122;Argentina;Tucumán;Infraestructura Gestionada (IaaS);4900000;1600000
+JaliscoRetail;Florencia;Maldonado;florencia.maldonado@hotmail.com;+52 33 3122-4433;México;Guadalajara;Hosting Dedicado y Backup;3500000;1200000
+PemexSim;Joaquín;Ortega;joaquin.ortega@pemexsim.com;+52 55 5130-9988;México;CDMX;Ciberseguridad y Monitoreo 24/7;9500000;3600000
+PueblaEcom;Martina;Acosta;martina.acosta@gmail.com;+52 222 240-1122;México;Puebla;Soporte IT y Mantenimiento;1900000;650000
+RegioSeguros;Luciano;Sosa;luciano.sosa@regioseguros.com;+52 81 8345-4455;México;Monterrey;Migración Cloud AWS;7200000;2500000
+BogotáExpress;Victoria;Luna;victoria.luna@hotmail.com;+57 601 743-1122;Colombia;Bogotá;Hosting Dedicado y Backup;3400000;1150000
+MedellínModa;Facundo;Benítez;facundo.benitez@medellinmoda.com;+57 604 312-4433;Colombia;Medellín;Soporte IT y Mantenimiento;2100000;700000
+CaféPremium;Julieta;Flores;julieta.flores@gmail.com;+57 606 325-1122;Colombia;Pereira;Infraestructura Gestionada (IaaS);4600000;1500000
+ValleFarma;Nicolás;Suarez;nicolas.suarez@vallefarma.com;+57 602 885-9988;Colombia;Cali;Consultoría DevOps y CI/CD;4400000;1450000
+BarranquillaPort;Antonella;Salazar;antonella.salazar@hotmail.com;+57 605 375-4455;Colombia;Barranquilla;Ciberseguridad y Monitoreo 24/7;8300000;3100000
+EjeCafeteroIT;Jerónimo;Jimenez;jeronimo.jimenez@ejecafeteroit.com;+57 606 333-2211;Colombia;Pereira;Soporte IT y Mantenimiento;1800000;600000
+BioBioMaderas;Valeria;Ortiz;valeria.ortiz@gmail.com;+56 41 222-3344;Chile;Concepción;Hosting Dedicado y Backup;3700000;1250000
+AntofagastaMinería;Emmanuel;Cruz;emmanuel.cruz@antofagastamineria.com;+56 55 265-1122;Chile;Antofagasta;Infraestructura Gestionada (IaaS);6800000;2400000
+ValpoFrutas;Delfina;Castillo;delfina.castillo@hotmail.com;+56 32 230-8899;Chile;Valparaíso;Soporte IT y Mantenimiento;2000000;680000
+IquiqueImport;Bautista;Reyes;bautista.reyes@iquiqueimport.com;+56 57 241-4455;Chile;Iquique;Hosting Dedicado y Backup;3300000;1100000
+LimaRetail;Renata;Rios;renata.rios@gmail.com;+51 1 422-5544;Perú;Lima;Migración Cloud AWS;7100000;2500000
+CuscoTours;Samuel;Delgado;samuel.delgado@cuscotours.com;+51 84 231-1122;Perú;Cusco;Soporte IT y Mantenimiento;1750000;580000
+ArequipaTextil;Milagros;Navarro;milagros.navarro@hotmail.com;+51 54 212-4433;Perú;Arequipa;Hosting Dedicado y Backup;3100000;1050000
+ColoniaAgro;Alejandro;Peralta;alejandro.peralta@coloniaagro.com;+598 522 33-4455;Uruguay;Colonia;Soporte IT y Mantenimiento;1900000;620000
+SaltoCitrus;Ximena;Ibañez;ximena.ibanez@gmail.com;+598 73 24-4556;Uruguay;Salto;Hosting Dedicado y Backup;3250000;1100000
+UruguayLogística;Diego;Blanco;diego.blanco@uruguaylogistica.com;+598 2 613-8899;Uruguay;Montevideo;Infraestructura Gestionada (IaaS);5500000;1900000

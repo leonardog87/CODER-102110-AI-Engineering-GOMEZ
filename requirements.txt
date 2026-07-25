@@ -1,0 +1,12 @@
+streamlit
+pandas
+python-dotenv
+langchain
+langgraph
+langchain-community
+langchain-huggingface
+langchain-openai
+faiss-cpu
+langsmith
+chromadb
+langchain-chroma
