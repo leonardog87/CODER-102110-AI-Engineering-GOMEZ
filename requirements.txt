@@ -10,3 +10,4 @@ faiss-cpu
 langsmith
 chromadb
 langchain-chroma
+pypdf

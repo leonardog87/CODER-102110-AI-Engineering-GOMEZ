@@ -7,8 +7,8 @@ from typing import Annotated, List, Literal, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-UserRole = Literal["Invitado", "Soporte_Nivel_1", "Admin_Nivel_2"]
-AgentName = Literal["agente_publico", "agente_soporte", "agente_admin"]
+UserRole = Literal["Invitado", "Empleado", "Administrador"]
+AgentName = Literal["agente_invitado", "agente_empleado", "agente_administrador"]
 
 
 class AgentState(TypedDict, total=False):

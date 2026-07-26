@@ -9,9 +9,15 @@ import numpy as np
 from pathlib import Path
 import chromadb
 from chromadb.utils import embedding_functions
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configurar ruta
-CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+CHROMA_PERSIST_DIR = os.getenv(
+    "CHROMA_PERSIST_DIR",
+    "./manuales_complejos_chroma_db",
+)
 
 print("=" * 70)
 print(f"📂 Conectando a ChromaDB en: {CHROMA_PERSIST_DIR}")

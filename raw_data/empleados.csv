@@ -1,51 +1,21 @@
-﻿Nombre;Apellido;Puesto;Mail;Telefono;Sueldo_ARS;Direccion;Equipo;Acceso_AWS;;;;;;;
-Mateo;Gomez;Fullstack Developer;mateo.gomez@ciudadanalitica.com;+54 11 4321-5678;3200000;Av. Corrientes 1230; CABA; Argentina;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS; Lambda; S3)
-Valentina;Rodriguez;Data Scientist;valentina.rodriguez@ciudadanalitica.com;+54 351 422-9000;3600000;Av. Colón 450; Córdoba; Argentina;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline (S3; SageMaker; Redshift);;
-Santiago;Fernandez;UX/UI Designer;santiago.fernandez@ciudadanalitica.com;+54 341 440-2211;2600000;Bv. Oroño 890; Rosario; Argentina;MacBook Pro M3 Pro (18GB RAM; 512GB SSD);Read-Only (S3 Assets);;;;
-Camila;Lopez;DevOps Engineer;camila.lopez@ciudadanalitica.com;+54 11 4789-3322;4100000;Av. del Libertador 4500; CABA; Argentina;MacBook Pro M3 Pro (32GB RAM; 1TB SSD);Full Admin (IAM; VPC; EKS; CloudWatch);
-Lucas;Martinez;Data Analyst;lucas.martinez@ciudadanalitica.com;+54 261 423-5566;2400000;Av. San Martín 1120; Mendoza; Argentina;Lenovo ThinkPad T14 (AMD Ryzen 7; 16GB RAM; 512GB SSD);Read-Only (Athena; QuickSight);;
-Isabella;Gonzalez;QA Engineer;isabella.gonzalez@ciudadanalitica.com;+54 11 4512-9876;2200000;Calle Florida 350; CABA; Argentina;Lenovo ThinkPad L14 (Intel i7; 16GB RAM; 512GB SSD);Read-Only Dev Environment;;;
-Matías;Perez;Project Manager;matias.perez@ciudadanalitica.com;+54 351 488-1122;2500000;Duarte Quirós 1400; Córdoba; Argentina;Lenovo ThinkPad E14 (Intel i5; 16GB RAM; 512GB SSD);Billing & IAM Read-Only;;;
-Sofía;Sánchez;Fullstack Developer;sofia.sanchez@ciudadanalitica.com;+54 341 425-6677;3250000;Av. Pellegrini 1200; Rosario; Argentina;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS; Lambda; S3)
-Benjamín;Romero;Data Scientist;benjamin.romero@ciudadanalitica.com;+54 11 4951-4433;3700000;Av. Rivadavia 2400; CABA; Argentina;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline (S3; SageMaker);;;
-Catalina;García;UX/UI Designer;catalina.garcia@ciudadanalitica.com;+54 261 429-8811;2650000;Arístides Villanueva 420; Mendoza; Argentina;MacBook Pro M3 Pro (18GB RAM; 512GB SSD);Read-Only (S3 Assets);;;;
-Tomás;Díaz;Fullstack Developer;tomas.diaz@ciudadanalitica.com;+56 2 2634-5511;3300000;Av. Providencia 1920; Santiago; Chile;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS);;
-Florencia;Silva;Data Scientist;florencia.silva@ciudadanalitica.com;+598 2 901-2233;3650000;Av. 18 de Julio 1420; Montevideo; Uruguay;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline (S3; SageMaker);;;
-Joaquín;Álvarez;DevOps Engineer;joaquin.alvarez@ciudadanalitica.com;+56 2 2745-8899;4200000;Apoquindo 3400; Las Condes; Santiago; Chile;MacBook Pro M3 Pro (32GB RAM; 1TB SSD);Full Admin (IAM; VPC; EKS);
-Martina;Alonso;Data Analyst;martina.alonso@ciudadanalitica.com;+598 2 400-5566;2450000;Bulevar Artigas 1120; Montevideo; Uruguay;Lenovo ThinkPad T14 (AMD Ryzen 7; 16GB RAM; 512GB SSD);Read-Only (Athena; QuickSight);;
-Agustín;Torres;QA Engineer;agustin.torres@ciudadanalitica.com;+56 32 221-4455;2250000;Av. Errázuriz 1800; Valparaíso; Chile;Lenovo ThinkPad L14 (Intel i7; 16GB RAM; 512GB SSD);Read-Only Dev Environment;;;
-Emilia;Gutiérrez;Project Manager;emilia.gutierrez@ciudadanalitica.com;+56 2 2580-1122;2550000;Av. Vitacura 4300; Santiago; Chile;Lenovo ThinkPad E14 (Intel i5; 16GB RAM; 512GB SSD);Billing & IAM Read-Only;;;
-Luciano;Castro;Fullstack Developer;luciano.castro@ciudadanalitica.com;+598 2 620-9988;3200000;Luis Alberto de Herrera 1250; Montevideo; Uruguay;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS);;
-Victoria;Morales;Data Scientist;victoria.morales@ciudadanalitica.com;+56 2 2890-4433;3800000;Av. Nueva Tajamar 481; Las Condes; Santiago; Chile;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline (S3; SageMaker);;
-Facundo;Pereira;UX/UI Designer;facundo.pereira@ciudadanalitica.com;+598 2 710-3344;2600000;Av. Brasil 2500; Montevideo; Uruguay;MacBook Pro M3 Pro (18GB RAM; 512GB SSD);Read-Only (S3 Assets);;;;
-Julieta;Herrera;Data Analyst;julieta.herrera@ciudadanalitica.com;+56 2 2311-7766;2400000;Alameda 949; Santiago; Chile;Lenovo ThinkPad T14 (AMD Ryzen 7; 16GB RAM; 512GB SSD);Read-Only (Athena; QuickSight);;
-Nicolás;Medina;Fullstack Developer;nicolas.medina@ciudadanalitica.com;+57 601 315-4400;3400000;Carrera 7 #71-21; Bogotá; Colombia;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS);;
-Antonella;Vargas;Data Scientist;antonella.vargas@ciudadanalitica.com;+51 1 421-9900;3750000;Av. Javier Prado Este 480; San Isidro; Lima; Perú;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline;;;
-Jerónimo;Rojas;DevOps Engineer;jeronimo.rojas@ciudadanalitica.com;+57 604 250-1122;4300000;Calle 10 #43E-11; El Poblado; Medellín; Colombia;MacBook Pro M3 Pro (32GB RAM; 1TB SSD);Full Admin;;;
-Valeria;Mendoza;UX/UI Designer;valeria.mendoza@ciudadanalitica.com;+51 1 242-5566;2700000;Av. Larco 770; Miraflores; Lima; Perú;MacBook Pro M3 Pro (18GB RAM; 512GB SSD);Read-Only (S3 Assets);;;
-Emmanuel;Cáceres;Data Analyst;emmanuel.caceres@ciudadanalitica.com;+57 601 742-8899;2500000;Calle 100 #13-21; Bogotá; Colombia;Lenovo ThinkPad T14 (AMD Ryzen 7; 16GB RAM; 512GB SSD);Read-Only;;;
-Delfina;Benítez;QA Engineer;delfina.benitez@ciudadanalitica.com;+51 1 444-3322;2300000;Av. Arequipa 3500; San Isidro; Lima; Perú;Lenovo ThinkPad L14 (Intel i7; 16GB RAM; 512GB SSD);Read-Only Dev;;
-Bautista;Ruiz;Project Manager;bautista.ruiz@ciudadanalitica.com;+57 604 311-5566;2600000;Carrera 43A #1-50; Medellín; Colombia;Lenovo ThinkPad E14 (Intel i5; 16GB RAM; 512GB SSD);Billing & IAM Read-Only;;;
-Renata;Flores;Fullstack Developer;renata.flores@ciudadanalitica.com;+51 1 221-8877;3300000;Av. Pardo 601; Miraflores; Lima; Perú;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS);
-Samuel;Suarez;Data Scientist;samuel.suarez@ciudadanalitica.com;+57 601 621-3344;3900000;Carrera 11 #93-53; Bogotá; Colombia;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline;;;;
-Milagros;Salazar;UX/UI Designer;milagros.salazar@ciudadanalitica.com;+51 1 475-1122;2650000;Av. Salaverry 2400; Jesús María; Lima; Perú;MacBook Pro M3 Pro (18GB RAM; 512GB SSD);Read-Only (S3 Assets);;;
-Alejandro;Jimenez;Fullstack Developer;alejandro.jimenez@ciudadanalitica.com;+52 55 5200-1122;3500000;Paseo de la Reforma 222; CDMX; México;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS);;
-Ximena;Ortiz;Data Scientist;ximena.ortiz@ciudadanalitica.com;+52 33 3615-4433;3950000;Av. Vallarta 2600; Guadalajara; México;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline;;;;
-Diego;Silva;DevOps Engineer;diego.silva@ciudadanalitica.com;+52 55 5400-9988;4400000;Av. Insurgentes Sur 1600; CDMX; México;MacBook Pro M3 Pro (32GB RAM; 1TB SSD);Full Admin;;;;
-Fernanda;Castillo;UX/UI Designer;fernanda.castillo@ciudadanalitica.com;+52 33 3818-7766;2750000;Av. Americas 1500; Guadalajara; México;MacBook Pro M3 Pro (18GB RAM; 512GB SSD);Read-Only (S3 Assets);;;;
-Leonardo;Reyes;Data Analyst;leonardo.reyes@ciudadanalitica.com;+52 55 5130-2211;2550000;Campos Elíseos 400; Polanco; CDMX; México;Lenovo ThinkPad T14 (AMD Ryzen 7; 16GB RAM; 512GB SSD);Read-Only;;
-Mariana;Morales;QA Engineer;mariana.morales@ciudadanalitica.com;+52 55 5622-4455;2350000;Av. Universidad 3000; CDMX; México;Lenovo ThinkPad L14 (Intel i7; 16GB RAM; 512GB SSD);Read-Only Dev;;;
-Daniel;Cruz;Project Manager;daniel.cruz@ciudadanalitica.com;+52 33 3122-8899;2650000;Av. Mariano Otero 1249; Guadalajara; México;Lenovo ThinkPad E14 (Intel i5; 16GB RAM; 512GB SSD);Billing & IAM Read-Only;;;
-Paulina;Rios;Fullstack Developer;paulina.rios@ciudadanalitica.com;+52 55 5280-3344;3450000;Horacio 1855; Polanco; CDMX; México;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS);
-Gabriel;Mendoza;Data Scientist;gabriel.mendoza@ciudadanalitica.com;+52 55 5325-7788;4000000;Vito Alessio Robles 300; CDMX; México;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline;;;;
-Natalia;Delgado;UX/UI Designer;natalia.delgado@ciudadanalitica.com;+52 33 3648-1122;2700000;Av. Plan de San Luis 2100; Guadalajara; México;MacBook Pro M3 Pro (18GB RAM; 512GB SSD);Read-Only (S3 Assets);;;;
-Joaquín;Navarro;Fullstack Developer;joaquin.navarro@ciudadanalitica.com;+54 11 4801-2233;3300000;Av. Santa Fe 2500; CABA; Argentina;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS);;
-Clara;Peralta;Data Scientist;clara.peralta@ciudadanalitica.com;+54 221 423-4455;3800000;Calle 7 Nro 820; La Plata; Argentina;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline;;;;
-Juan;Ibañez;DevOps Engineer;juan.ibanez@ciudadanalitica.com;+54 11 4315-9988;4250000;Av. Leandro N. Alem 850; CABA; Argentina;MacBook Pro M3 Pro (32GB RAM; 1TB SSD);Full Admin;;;;
-Juana;Blanco;UX/UI Designer;juana.blanco@ciudadanalitica.com;+54 223 491-5566;2600000;San Martín 2500; Mar del Plata; Argentina;MacBook Pro M3 Pro (18GB RAM; 512GB SSD);Read-Only (S3 Assets);;;;
-Franco;Maldonado;Data Analyst;franco.maldonado@ciudadanalitica.com;+54 387 431-7788;2450000;Mitre 250; Salta; Argentina;Lenovo ThinkPad T14 (AMD Ryzen 7; 16GB RAM; 512GB SSD);Read-Only;;;
-Martina;Ortega;QA Engineer;martina.ortega@ciudadanalitica.com;+54 11 4771-4433;2250000;Av. Cabildo 2200; CABA; Argentina;Lenovo ThinkPad L14 (Intel i7; 16GB RAM; 512GB SSD);Read-Only Dev;;;
-Bruno;Acosta;Project Manager;bruno.acosta@ciudadanalitica.com;+54 221 483-1122;2550000;Calle 50 Nro 550; La Plata; Argentina;Lenovo ThinkPad E14 (Intel i5; 16GB RAM; 512GB SSD);Billing & IAM Read-Only;;;
-Mia;Sosa;Fullstack Developer;mia.sosa@ciudadanalitica.com;+54 223 495-2233;3200000;Güemes 2800; Mar del Plata; Argentina;Dell XPS 15 (Intel i9; 32GB RAM; 1TB SSD);Read-Write (EC2; RDS);;
-Thiago;Medina;Data Scientist;thiago.medina@ciudadanalitica.com;+54 387 422-1122;3750000;Balcarce 450; Salta; Argentina;MacBook Pro M3 Max (32GB RAM; 1TB SSD);Read-Write Data Pipeline;;;;
-Alma;Luna;UX/UI Designer;alma.luna@ciudadanalitica.com;+54 11 4822-9900;2650000;Av. Las Heras 3200; CABA; Argentina;MacBook Pro M3 Pro (18GB RAM; 512GB SSD);Read-Only (S3 Assets);;;;
+﻿DNI;Apellido;Nombre;Area;Puesto;Sueldo_ARS
+45222333;Gomez;Mateo;Desarrollo;Fullstack Developer Senior;3200000
+38456789;Rodriguez;Valentina;Data;Data Scientist Lead;3600000
+40123567;Fernandez;Santiago;Diseño;UX/UI Designer Senior;2600000
+42198765;Lopez;Camila;Infraestructura;DevOps Engineer Principal;4100000
+36549871;Martinez;Lucas;Data;Data Analyst Junior;2400000
+45789123;Gonzalez;Isabella;Calidad;QA Automation Engineer;2200000
+39876543;Perez;Matías;Gestión;Project Manager Scrum;2500000
+41234567;Sanchez;Sofía;Desarrollo;Fullstack Developer;3250000
+43567890;Romero;Benjamín;Data;Machine Learning Engineer;3700000
+46123456;Diaz;Carolina;RRHH;HR Business Partner;2300000
+37765432;Torres;Alejandro;Ventas;Sales Executive;2800000
+40876123;Ramirez;Natalia;Desarrollo;Backend Developer;3400000
+43219876;Ortiz;Julián;Data;Data Engineer;3000000
+44432109;Castro;Paula;Diseño;UI Designer;2550000
+38987654;Mendez;Diego;Infraestructura;Cloud Architect;4500000
+45123456;Flores;María;Desarrollo;Frontend Developer;3100000
+42345678;Rojas;Carlos;Data;Business Intelligence Analyst;2850000
+39871234;Vargas;Laura;Diseño;Product Designer;2700000
+41123456;Molina;Javier;Infraestructura;Systems Administrator;3300000
+45678901;Ochoa;Daniela;Calidad;QA Manual Tester;2150000

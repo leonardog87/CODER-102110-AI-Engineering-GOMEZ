@@ -1,19 +1,19 @@
 """Shared role and agent identifiers."""
 
 ROLE_INVITADO = "Invitado"
-ROLE_SOPORTE = "Soporte_Nivel_1"
-ROLE_ADMIN = "Admin_Nivel_2"
+ROLE_EMPLEADO = "Empleado"
+ROLE_ADMINISTRADOR = "Administrador"
 
 AGENT_MANAGER = "agente_encargado"
-AGENT_PUBLIC = "agente_publico"
-AGENT_SUPPORT = "agente_soporte"
-AGENT_ADMIN = "agente_admin"
+AGENT_INVITADO = "agente_invitado"
+AGENT_EMPLEADO = "agente_empleado"
+AGENT_ADMINISTRADOR = "agente_administrador"
 
 ROLE_TO_AGENT = {
-    ROLE_INVITADO: AGENT_PUBLIC,
-    ROLE_SOPORTE: AGENT_SUPPORT,
-    ROLE_ADMIN: AGENT_ADMIN,
+    ROLE_INVITADO: AGENT_INVITADO,
+    ROLE_EMPLEADO: AGENT_EMPLEADO,
+    ROLE_ADMINISTRADOR: AGENT_ADMINISTRADOR,
 }
 
 DEFAULT_ROLE = ROLE_INVITADO
-DEFAULT_AGENT = AGENT_PUBLIC
+DEFAULT_AGENT = AGENT_INVITADO

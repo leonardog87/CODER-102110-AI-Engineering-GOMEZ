@@ -22,7 +22,7 @@ def init_chromadb():
     """Inicializa ChromaDB con los documentos RAG."""
     try:
         # ✅ CORREGIDO: importar desde la raíz
-        from rag_pipeline import get_vector_store, get_corpus_stats
+        from rag.pipeline import get_vector_store, get_corpus_stats
         
         logger.info("🚀 Inicializando ChromaDB...")
         
@@ -39,13 +39,18 @@ def init_chromadb():
         logger.info(f"📊 Estadísticas:")
         logger.info(f"   - Documentos: {stats['documents']}")
         logger.info(f"   - Chunks: {stats['chunks']}")
-        logger.info(f"   - Directorio: {os.getenv('CHROMA_PERSIST_DIR', './chroma_db')}")
-        logger.info(f"   - Colección: {os.getenv('CHROMA_COLLECTION_NAME', 'ciudad_analitica_rag')}")
+        logger.info(f"   - Directorio: {os.getenv('CHROMA_PERSIST_DIR', './manuales_complejos_chroma_db')}")
+        logger.info(f"   - Colección: {os.getenv('CHROMA_COLLECTION_NAME', 'manuales_complejos')}")
         
         # Verificar contenido
         try:
             import chromadb
-            client = chromadb.PersistentClient(path=os.getenv('CHROMA_PERSIST_DIR', './chroma_db'))
+            client = chromadb.PersistentClient(
+                path=os.getenv(
+                    'CHROMA_PERSIST_DIR',
+                    './manuales_complejos_chroma_db',
+                )
+            )
             collections = client.list_collections()
             logger.info(f"📚 Colecciones en ChromaDB: {[c.name for c in collections]}")
             for col in collections:

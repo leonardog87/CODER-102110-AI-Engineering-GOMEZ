@@ -6,35 +6,40 @@ import logging
 
 from langgraph.graph import END, START, StateGraph
 
-from agent_system.constants import AGENT_ADMIN, AGENT_MANAGER, AGENT_PUBLIC, AGENT_SUPPORT
-from agent_system.admin_agent import agente_admin
+from agent_system.administrador_agent import agente_administrador
+from agent_system.constants import (
+    AGENT_ADMINISTRADOR,
+    AGENT_EMPLEADO,
+    AGENT_INVITADO,
+    AGENT_MANAGER,
+)
+from agent_system.empleado_agent import agente_empleado
+from agent_system.invitado_agent import agente_invitado
 from agent_system.manager_agent import agente_encargado, enrutar_por_designacion
-from agent_system.public_agent import agente_publico
 from agent_system.state import AgentState
-from agent_system.support_agent import agente_soporte
 
 logging.basicConfig(level=logging.INFO)
 
 builder = StateGraph(AgentState)
 
 builder.add_node(AGENT_MANAGER, agente_encargado)
-builder.add_node(AGENT_PUBLIC, agente_publico)
-builder.add_node(AGENT_SUPPORT, agente_soporte)
-builder.add_node(AGENT_ADMIN, agente_admin)
+builder.add_node(AGENT_INVITADO, agente_invitado)
+builder.add_node(AGENT_EMPLEADO, agente_empleado)
+builder.add_node(AGENT_ADMINISTRADOR, agente_administrador)
 
 builder.add_edge(START, AGENT_MANAGER)
 builder.add_conditional_edges(
     AGENT_MANAGER,
     enrutar_por_designacion,
     {
-        AGENT_PUBLIC: AGENT_PUBLIC,
-        AGENT_SUPPORT: AGENT_SUPPORT,
-        AGENT_ADMIN: AGENT_ADMIN,
+        AGENT_INVITADO: AGENT_INVITADO,
+        AGENT_EMPLEADO: AGENT_EMPLEADO,
+        AGENT_ADMINISTRADOR: AGENT_ADMINISTRADOR,
     },
 )
 
-builder.add_edge(AGENT_PUBLIC, END)
-builder.add_edge(AGENT_SUPPORT, END)
-builder.add_edge(AGENT_ADMIN, END)
+builder.add_edge(AGENT_INVITADO, END)
+builder.add_edge(AGENT_EMPLEADO, END)
+builder.add_edge(AGENT_ADMINISTRADOR, END)
 
 app_graph = builder.compile()

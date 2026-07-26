@@ -1,0 +1,34 @@
+"""Agente especialista para el rol Empleado."""
+
+from __future__ import annotations
+
+import logging
+from typing import Dict, List
+
+from langchain_core.messages import BaseMessage
+
+from agent_system.prompts import SYSTEM_PROMPT_EMPLEADO
+from agent_system.runtime import invoke_specialist_agent
+from agent_system.state import AgentState
+from agent_system.tools import (
+    consultar_empleados_mcp_empleado,
+    knowledge_retrieve_context,
+    rag_retrieve_context,
+)
+
+logger = logging.getLogger("agente_corporativo.agent_system.empleado_agent")
+
+EMPLEADO_TOOLS = [
+    rag_retrieve_context,
+    knowledge_retrieve_context,
+    consultar_empleados_mcp_empleado,
+]
+
+
+def agente_empleado(state: AgentState) -> Dict[str, List[BaseMessage]]:
+    logger.info("Ejecutando agente_empleado")
+    return invoke_specialist_agent(
+        system_prompt=SYSTEM_PROMPT_EMPLEADO,
+        messages=state["messages"],
+        tools=EMPLEADO_TOOLS,
+    )

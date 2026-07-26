@@ -1,31 +1,40 @@
 """LangChain tools exposed to specialist agents."""
 
 from __future__ import annotations
-
 import json
 from typing import Any, Dict, List
-
 from langchain_core.tools import tool
 
 try:
-    from rag_pipeline import retrieve_context
+    from rag.pipeline import retrieve_context
 except Exception:  # pragma: no cover
 
     def retrieve_context(query: str, top_k: int = 3) -> str:
         return (
-            "[FALLBACK RAG] No se pudo importar rag_pipeline.retrieve_context. "
+            "[FALLBACK RAG] No se pudo importar rag.pipeline.retrieve_context. "
             f"Consulta recibida: {query!r} | top_k={top_k}"
         )
 
 try:
-    from mcp_server import mcp_execute_query
+    from rag.knowledge_pipeline import retrieve_knowledge_context
+except Exception:  # pragma: no cover
+
+    def retrieve_knowledge_context(query: str, top_k: int = 3) -> str:
+        return (
+            "[FALLBACK KNOWLEDGE] No se pudo importar "
+            "rag.knowledge_pipeline.retrieve_knowledge_context. "
+            f"Consulta recibida: {query!r} | top_k={top_k}"
+        )
+
+try:
+    from mcp.server import mcp_execute_query
 except Exception:  # pragma: no cover
 
     def mcp_execute_query(tabla: str, filtros: dict, agente_rol: str) -> dict:
         return {
             "status_code": 500,
             "status": "error",
-            "message": "No se pudo importar mcp_server.mcp_execute_query.",
+            "message": "No se pudo importar mcp.server.mcp_execute_query.",
             "data": [],
         }
 
@@ -75,83 +84,69 @@ def rag_retrieve_context(query: str, top_k: int = 3) -> str:
     return retrieve_context(query=query, top_k=top_k)
 
 
-# ──────────────────────────────────────────────────────────────
-# ✅ TOOL: Consultar clientes para Soporte
-# ──────────────────────────────────────────────────────────────
-@tool("consultar_clientes_mcp_soporte")
-def consultar_clientes_mcp_soporte(
-    cliente_id: str | None = None,
-    nombre: str | None = None,
-    estado: str | None = None,
-    segmento: str | None = None,
+@tool("knowledge_retrieve_context")
+def knowledge_retrieve_context(query: str, top_k: int = 3) -> str:
+    """Consulta manuales y PDF de la base de conocimiento no parametrizado."""
+    return retrieve_knowledge_context(query=query, top_k=top_k)
+
+
+def _consultar_empleados(
+    *,
+    agente_rol: str,
+    dni: str | None,
+    nombre: str | None,
+    apellido: str | None,
+    area: str | None,
+    puesto: str | None,
 ) -> str:
-    """Consulta segura de clientes para el rol Soporte_Nivel_1."""
-
     filtros = compact_filters(
-        Cliente_ID=cliente_id,
+        DNI=dni,
         Nombre=nombre,
-        Estado=estado,
-        Segmento=segmento,
-    )
-    resultado = mcp_execute_query(
-        tabla="clientes",
-        filtros=filtros,
-        agente_rol="Soporte_Nivel_1",
-    )
-    resultado = truncar_resultado(resultado, max_items=5)
-    return safe_json(resultado)
-
-
-# ──────────────────────────────────────────────────────────────
-# ✅ TOOL: Consultar clientes para Admin
-# ──────────────────────────────────────────────────────────────
-@tool("consultar_clientes_mcp_admin")
-def consultar_clientes_mcp_admin(
-    cliente_id: str | None = None,
-    nombre: str | None = None,
-    estado: str | None = None,
-    segmento: str | None = None,
-) -> str:
-    """Consulta completa de clientes para el rol Admin_Nivel_2."""
-
-    filtros = compact_filters(
-        Cliente_ID=cliente_id,
-        Nombre=nombre,
-        Estado=estado,
-        Segmento=segmento,
-    )
-    resultado = mcp_execute_query(
-        tabla="clientes",
-        filtros=filtros,
-        agente_rol="Admin_Nivel_2",
-    )
-    resultado = truncar_resultado(resultado, max_items=5)
-    return safe_json(resultado)
-
-
-# ──────────────────────────────────────────────────────────────
-# ✅ TOOL: Consultar empleados para Admin (ÚNICA DEFINICIÓN)
-# ──────────────────────────────────────────────────────────────
-@tool("consultar_empleados_mcp_admin")
-def consultar_empleados_mcp_admin(
-    empleado_id: str | None = None,
-    nombre: str | None = None,
-    area: str | None = None,
-    rol: str | None = None,
-) -> str:
-    """Consulta completa de empleados para el rol Admin_Nivel_2."""
-    
-    filtros = compact_filters(
-        Empleado_ID=empleado_id,
-        Nombre=nombre,
+        Apellido=apellido,
         Area=area,
-        Rol=rol,
+        Puesto=puesto,
     )
     resultado = mcp_execute_query(
         tabla="empleados",
         filtros=filtros,
-        agente_rol="Admin_Nivel_2",
+        agente_rol=agente_rol,
     )
-    
-    resultado = truncar_resultado(resultado, max_items=3)
-    return safe_json(resultado)
+    return safe_json(truncar_resultado(resultado, max_items=5))
+
+
+@tool("consultar_empleados_mcp_empleado")
+def consultar_empleados_mcp_empleado(
+    dni: str | None = None,
+    nombre: str | None = None,
+    apellido: str | None = None,
+    area: str | None = None,
+    puesto: str | None = None,
+) -> str:
+    """Consulta empleados sin exponer salarios ni estadísticas salariales."""
+    return _consultar_empleados(
+        agente_rol="Empleado",
+        dni=dni,
+        nombre=nombre,
+        apellido=apellido,
+        area=area,
+        puesto=puesto,
+    )
+
+
+@tool("consultar_empleados_mcp_administrador")
+def consultar_empleados_mcp_administrador(
+    dni: str | None = None,
+    nombre: str | None = None,
+    apellido: str | None = None,
+    area: str | None = None,
+    puesto: str | None = None,
+) -> str:
+    """Consulta completa de empleados, incluidos salarios y estadísticas."""
+    return _consultar_empleados(
+        agente_rol="Administrador",
+        dni=dni,
+        nombre=nombre,
+        apellido=apellido,
+        area=area,
+        puesto=puesto,
+    )

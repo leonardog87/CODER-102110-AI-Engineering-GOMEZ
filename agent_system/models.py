@@ -14,7 +14,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 
 load_dotenv()
 
-logger = logging.getLogger("ciudad_analitica.agent_system.models")
+logger = logging.getLogger("agente_corporativo.agent_system.models")
 
 _token = os.getenv("HUGGINGFACEHUB_API_TOKEN") or os.getenv("HF_TOKEN")
 if _token:
@@ -147,7 +147,7 @@ def build_chat_model():
 
     model_id = (
         os.getenv("HF_MODEL_ID")
-        or os.getenv("CIUDAD_ANALITICA_HF_MODEL_ID")
+        or os.getenv("AGENTE_CORPORATIVO_HF_MODEL_ID")
         or openai_model
     )
     token = os.getenv("HUGGINGFACEHUB_API_TOKEN") or os.getenv("HF_TOKEN")
@@ -216,35 +216,36 @@ class OfflineFallbackChatModel:
         normalized_user_text = self._normalize(user_text)
         tool_names = self._available_tool_names()
 
-        if "empleado" in normalized_user_text and "consultar_empleados_mcp_admin" in tool_names:
+        employee_tool = next(
+            (
+                name
+                for name in (
+                    "consultar_empleados_mcp_administrador",
+                    "consultar_empleados_mcp_empleado",
+                )
+                if name in tool_names
+            ),
+            None,
+        )
+        if "empleado" in normalized_user_text and employee_tool:
             return AIMessage(
                 content=(
-                    '{"name": "consultar_empleados_mcp_admin", '
-                    '"arguments": {"empleado_id": null, "nombre": null, "area": null, "rol": null}}'
+                    f'{{"name": "{employee_tool}", '
+                    '"arguments": {"dni": null, "nombre": null, "apellido": null, '
+                    '"area": null, "puesto": null}}'
                 )
             )
 
         if "cliente" in normalized_user_text:
-            if "consultar_clientes_mcp_admin" in tool_names:
-                return AIMessage(
-                    content=(
-                        '{"name": "consultar_clientes_mcp_admin", '
-                        '"arguments": {"cliente_id": null, "nombre": null, "estado": null, "segmento": null}}'
-                    )
-                )
-            if "consultar_clientes_mcp_soporte" in tool_names:
-                return AIMessage(
-                    content=(
-                        '{"name": "consultar_clientes_mcp_soporte", '
-                        '"arguments": {"cliente_id": null, "nombre": null, "estado": null, "segmento": null}}'
-                    )
-                )
+            return AIMessage(
+                content="La base SQLite disponible contiene únicamente empleados."
+            )
 
         if "empleado" in normalized_user_text:
             return AIMessage(
                 content=(
                     "No tenes permisos para consultar empleados con el rol actual. "
-                    "Inicia sesion como Admin_Nivel_2 para acceder a esa informacion."
+                    "Este rol no tiene acceso a la base de empleados."
                 )
             )
 

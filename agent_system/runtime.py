@@ -76,7 +76,7 @@ def _truncate_tool_result_if_needed(content: str, max_chars: int = 1500) -> str:
     return content[:max_chars] + "... [RESULTADO TRUNCADO]"
 
 
-logger = logging.getLogger("ciudad_analitica.agent_system.runtime")
+logger = logging.getLogger("agente_corporativo.agent_system.runtime")
 
 
 def _invoke_with_fallback(model: Any, messages: List[BaseMessage], tools: List[Any] | None = None):
@@ -265,9 +265,20 @@ def _direct_tool_call_for_structured_query(
     )
 
     if "empleado" in user_text:
-        if "consultar_empleados_mcp_admin" in tool_names:
+        employee_tool = next(
+            (
+                name
+                for name in (
+                    "consultar_empleados_mcp_administrador",
+                    "consultar_empleados_mcp_empleado",
+                )
+                if name in tool_names
+            ),
+            None,
+        )
+        if employee_tool:
             return {
-                "name": "consultar_empleados_mcp_admin",
+                "name": employee_tool,
                 "args": {},
                 "id": "direct_empleados_query",
             }
@@ -275,23 +286,15 @@ def _direct_tool_call_for_structured_query(
             "name": "",
             "error": (
                 "No tenes permisos para consultar empleados con el rol actual. "
-                "Inicia sesion como Admin_Nivel_2 para acceder a esa informacion."
+                "Este rol no tiene acceso a la base de empleados."
             ),
         }
 
     if "cliente" in user_text and asks_for_list:
-        if "consultar_clientes_mcp_admin" in tool_names:
-            return {
-                "name": "consultar_clientes_mcp_admin",
-                "args": {},
-                "id": "direct_clientes_admin_query",
-            }
-        if "consultar_clientes_mcp_soporte" in tool_names:
-            return {
-                "name": "consultar_clientes_mcp_soporte",
-                "args": {},
-                "id": "direct_clientes_soporte_query",
-            }
+        return {
+            "name": "",
+            "error": "La base SQLite disponible contiene únicamente empleados.",
+        }
 
     return None
 

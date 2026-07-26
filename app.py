@@ -1,7 +1,7 @@
 """
 app.py
 ------
-Interfaz principal de "Ciudad Analítica" con Streamlit.
+Interfaz principal de "Agente Corporativo IA" con Streamlit.
 """
 
 from __future__ import annotations
@@ -15,14 +15,15 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from mcp.query_history import load_query_history, save_query_record
 
 from agent_system.constants import (
     AGENT_MANAGER,
     DEFAULT_AGENT,
     DEFAULT_ROLE,
-    ROLE_ADMIN,
+    ROLE_ADMINISTRADOR,
+    ROLE_EMPLEADO,
     ROLE_INVITADO,
-    ROLE_SOPORTE,
     ROLE_TO_AGENT,
 )
 
@@ -30,7 +31,7 @@ from agent_system.constants import (
 # Configuración de logging
 # ---------------------------------------------------------------------
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("ciudad_analitica.app")
+logger = logging.getLogger("agente_corporativo.app")
 
 # ---------------------------------------------------------------------
 # Carga de variables de entorno.
@@ -88,8 +89,8 @@ else:
 # Configuración de página.
 # ---------------------------------------------------------------------
 st.set_page_config(
-    page_title="Ciudad Analítica",
-    page_icon="🏢",
+    page_title="Agente Corporativo IA",
+    page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -100,36 +101,36 @@ st.set_page_config(
 LOGO_PATH = Path(os.getenv("LOGO_PATH", "logo.jpg"))
 
 ROLE_OPTIONS = {
-    "Invitado (Público)": ROLE_INVITADO,
-    "Soporte_Nivel_1 (Técnico)": ROLE_SOPORTE,
-    "Admin_Nivel_2 (Administrador)": ROLE_ADMIN,
+    "Invitado": ROLE_INVITADO,
+    "Empleado": ROLE_EMPLEADO,
+    "Administrador": ROLE_ADMINISTRADOR,
 }
 
 ROLE_PERMISSIONS = {
     ROLE_INVITADO: {
-        "Clientes": "Bloqueada",
-        "Empleados": "Bloqueada",
-        "RAG": "Bloqueado",
+        "Manuales simples": "Habilitado",
+        "Manuales complejos": "Bloqueado",
+        "SQLite empleados": "Bloqueado",
         "badge": "🟡 Invitado",
     },
-    ROLE_SOPORTE: {
-        "Clientes": "Solo datos públicos",
-        "Empleados": "Bloqueado",
-        "RAG": "Habilitado",
-        "badge": "🟠 Soporte Nivel 1",
+    ROLE_EMPLEADO: {
+        "Manuales simples": "Habilitado",
+        "Manuales complejos": "Habilitado",
+        "SQLite empleados": "Sin salarios",
+        "badge": "🟠 Empleado",
     },
-    ROLE_ADMIN: {
-        "Clientes": "Acceso Total",
-        "Empleados": "Acceso Total",
-        "RAG": "Habilitado",
-        "badge": "🟢 Admin Nivel 2",
+    ROLE_ADMINISTRADOR: {
+        "Manuales simples": "Habilitado",
+        "Manuales complejos": "Habilitado",
+        "SQLite empleados": "Acceso completo",
+        "badge": "🟢 Administrador",
     },
 }
 
-PUBLIC_SERVICES = [
-    "Migración e Infraestructura Cloud",
-    "Implementación de Data Pipelines",
-    "Auditoría de Ciberseguridad",
+SIMPLE_MANUAL_TOPICS = [
+    "Registro y verificación de cuenta",
+    "Recuperación de contraseña",
+    "Contacto y recomendaciones de seguridad",
 ]
 
 
@@ -137,12 +138,14 @@ PUBLIC_SERVICES = [
 # Estado inicial de la app.
 # ---------------------------------------------------------------------
 def init_session_state() -> None:
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-    if "audit_log" not in st.session_state:
-        st.session_state.audit_log = []
+    if "chat_history_by_role" not in st.session_state:
+        st.session_state.chat_history_by_role = {}
+    if "audit_log_by_role" not in st.session_state:
+        st.session_state.audit_log_by_role = {}
+    if "loaded_history_roles" not in st.session_state:
+        st.session_state.loaded_history_roles = set()
     if "selected_role_label" not in st.session_state:
-        st.session_state.selected_role_label = "Invitado (Público)"
+        st.session_state.selected_role_label = "Invitado"
     if "langsmith_enabled" not in st.session_state:
         st.session_state.langsmith_enabled = os.getenv("LANGSMITH_TRACING", "true").lower() == "true"
 
@@ -153,6 +156,50 @@ def role_to_internal(role_label: str) -> str:
 
 def internal_to_node(role: str) -> str:
     return ROLE_TO_AGENT.get(role, DEFAULT_AGENT)
+
+
+def ensure_role_history_loaded(role: str) -> None:
+    """Carga desde SQLite únicamente el historial del rol activo."""
+    if role in st.session_state.loaded_history_roles:
+        return
+
+    records = load_query_history(role)
+    chat_history: List[Dict[str, str]] = []
+    audit_log: List[Dict[str, Any]] = []
+    for record in records:
+        chat_history.extend(
+            [
+                {"role": "user", "content": record["user_query"]},
+                {"role": "assistant", "content": record["assistant_response"]},
+            ]
+        )
+        audit_log.append(
+            {
+                "record_id": record["id"],
+                "created_at": record["created_at"],
+                "rol_usuario": record["role"],
+                "nodo_ejecutado": record["agent_name"],
+                "agente_encargado": AGENT_MANAGER,
+                "motivo_designacion": record["designation_reason"],
+                "input_usuario": record["user_query"],
+                "respuesta_asistente": record["assistant_response"],
+                "tool_traces": record["tool_traces"],
+            }
+        )
+
+    st.session_state.chat_history_by_role[role] = chat_history
+    st.session_state.audit_log_by_role[role] = audit_log
+    st.session_state.loaded_history_roles.add(role)
+
+
+def role_chat_history(role: str) -> List[Dict[str, str]]:
+    ensure_role_history_loaded(role)
+    return st.session_state.chat_history_by_role[role]
+
+
+def role_audit_log(role: str) -> List[Dict[str, Any]]:
+    ensure_role_history_loaded(role)
+    return st.session_state.audit_log_by_role[role]
 
 
 def safe_json_loads(value: Any) -> Optional[Any]:
@@ -179,7 +226,7 @@ def render_logo() -> None:
 
 
 def render_sidebar() -> str:
-    st.sidebar.title("Ciudad Analítica")
+    st.sidebar.title("Agente Corporativo IA")
     render_logo()
 
     st.sidebar.subheader("Iniciar Sesión como:")
@@ -200,9 +247,9 @@ def render_sidebar() -> str:
 
     st.sidebar.info(
         f"**Rol actual:** {perms['badge']}\n\n"
-        f"**Clientes:** {perms['Clientes']}\n\n"
-        f"**Empleados:** {perms['Empleados']}\n\n"
-        f"**RAG:** {perms['RAG']}"
+        f"**Manuales simples:** {perms['Manuales simples']}\n\n"
+        f"**Manuales complejos:** {perms['Manuales complejos']}\n\n"
+        f"**SQLite empleados:** {perms['SQLite empleados']}"
     )
 
     st.sidebar.caption(
@@ -222,18 +269,17 @@ def render_sidebar() -> str:
 
 
 def render_header(role: str) -> None:
-    st.title("🏢 Ciudad Analítica - Centro de Operaciones IA")
+    st.title("🤖 Agente Corporativo IA")
     st.write(
-        "Una simulación educativa para ver cómo un agente cambia su comportamiento "
-        "según el nivel de acceso, usando RAG, MCP y LangGraph."
+        "Bienvenido al Agente Corporativo IA"
     )
 
     if role == ROLE_INVITADO:
-        st.markdown("### Servicios principales")
+        st.markdown("### Temas disponibles en los manuales simples")
         cols = st.columns(3)
-        for col, service in zip(cols, PUBLIC_SERVICES):
+        for col, topic in zip(cols, SIMPLE_MANUAL_TOPICS):
             with col:
-                st.info(service)
+                st.info(topic)
 
 
 def _extract_last_ai_message(messages: List[BaseMessage]) -> str:
@@ -282,22 +328,32 @@ def append_audit_entry(
         "respuesta_asistente": ai_text,
         "tool_traces": tool_traces,
     }
-    st.session_state.audit_log.append(entry)
+    record_id = save_query_record(
+        role=role,
+        agent_name=agente_designado,
+        user_query=user_text,
+        assistant_response=ai_text,
+        designation_reason=motivo_designacion,
+        tool_traces=tool_traces,
+    )
+    entry["record_id"] = record_id
+    role_audit_log(role).append(entry)
 
 
-def render_chat_history() -> None:
-    for item in st.session_state.chat_history:
+def render_chat_history(role: str) -> None:
+    for item in role_chat_history(role):
         with st.chat_message(item["role"]):
             st.markdown(item["content"])
 
 
-def render_audit_panel() -> None:
+def render_audit_panel(role: str) -> None:
+    audit_log = role_audit_log(role)
     with st.expander("🛠️ Auditoría de Procesamiento MCP / RAG", expanded=False):
-        if not st.session_state.audit_log:
+        if not audit_log:
             st.info("Todavía no hay trazas. Envía un mensaje para ver el recorrido completo.")
             return
 
-        last = st.session_state.audit_log[-1]
+        last = audit_log[-1]
         st.markdown(f"**Rol:** `{last['rol_usuario']}`")
         st.markdown(f"**Agente encargado:** `{last.get('agente_encargado', AGENT_MANAGER)}`")
         st.markdown(f"**Nodo LangGraph ejecutado:** `{last['nodo_ejecutado']}`")
@@ -365,7 +421,11 @@ def get_langsmith_tracer():
         return None
 
 
-def invoke_graph(user_input: str, role: str) -> Dict[str, Any]:
+def invoke_graph(
+    user_input: str,
+    role: str,
+    conversation_history: List[Dict[str, str]],
+) -> Dict[str, Any]:
     """
     Llama al grafo con el estado mínimo solicitado por el módulo.
     Usa el método más confiable para LangSmith: tracer manual con callbacks.
@@ -376,8 +436,17 @@ def invoke_graph(user_input: str, role: str) -> Dict[str, Any]:
         )
 
     # Configuración de entrada
+    contextual_messages: List[BaseMessage] = []
+    for item in conversation_history[-20:]:
+        content = str(item.get("content", ""))
+        if item.get("role") == "user":
+            contextual_messages.append(HumanMessage(content=content))
+        elif item.get("role") == "assistant":
+            contextual_messages.append(AIMessage(content=content))
+    contextual_messages.append(HumanMessage(content=user_input))
+
     input_state = {
-        "messages": [HumanMessage(content=user_input)],
+        "messages": contextual_messages,
         "rol_usuario": role,
     }
 
@@ -414,10 +483,11 @@ def invoke_graph(user_input: str, role: str) -> Dict[str, Any]:
 
 def main() -> None:
     global logger
-    logger = logging.getLogger("ciudad_analitica.app")
+    logger = logging.getLogger("agente_corporativo.app")
 
     init_session_state()
     role = render_sidebar()
+    ensure_role_history_loaded(role)
     render_header(role)
 
     if app_graph is None:
@@ -429,16 +499,22 @@ def main() -> None:
             st.exception(AGENTS_IMPORT_ERROR)
         return
 
-    render_chat_history()
+    render_chat_history(role)
 
-    user_input = st.chat_input("Escribí tu consulta para Ciudad Analítica...")
+    user_input = st.chat_input("Escribí tu consulta para el Agente Corporativo IA...")
 
     if user_input:
-        st.session_state.chat_history.append({"role": "user", "content": user_input})
+        chat_history = role_chat_history(role)
+        previous_history = list(chat_history)
+        chat_history.append({"role": "user", "content": user_input})
 
         try:
             with st.spinner("Procesando con LangGraph, RAG y MCP..."):
-                result_state = invoke_graph(user_input=user_input, role=role)
+                result_state = invoke_graph(
+                    user_input=user_input,
+                    role=role,
+                    conversation_history=previous_history,
+                )
 
             messages = result_state.get("messages", []) if isinstance(result_state, dict) else []
             assistant_text = _extract_last_ai_message(messages)
@@ -450,9 +526,7 @@ def main() -> None:
                     "pero la interacción fue procesada."
                 )
 
-            st.session_state.chat_history.append(
-                {"role": "assistant", "content": assistant_text}
-            )
+            chat_history.append({"role": "assistant", "content": assistant_text})
             append_audit_entry(role, user_input, assistant_text, tool_traces, result_state)
 
             if st.session_state.langsmith_enabled:
@@ -467,27 +541,28 @@ def main() -> None:
                 "Ocurrió un problema al procesar la solicitud. "
                 "La interfaz sigue disponible para seguir trabajando."
             )
-            st.session_state.chat_history.append({"role": "assistant", "content": error_text})
-            st.session_state.audit_log.append(
+            chat_history.append({"role": "assistant", "content": error_text})
+            append_audit_entry(
+                role,
+                user_input,
+                error_text,
+                [
+                    {
+                        "status_code": 500,
+                        "status": "error",
+                        "message": str(exc),
+                    }
+                ],
                 {
-                    "rol_usuario": role,
-                    "nodo_ejecutado": internal_to_node(role),
-                    "agente_encargado": AGENT_MANAGER,
-                    "motivo_designacion": "La ejecucion fallo antes de completar la designacion.",
-                    "input_usuario": user_input,
-                    "respuesta_asistente": error_text,
-                    "tool_traces": [
-                        {
-                            "status_code": 500,
-                            "status": "error",
-                            "message": str(exc),
-                        }
-                    ],
-                }
+                    "agente_designado": internal_to_node(role),
+                    "motivo_designacion": (
+                        "La ejecución falló antes de completar la designación."
+                    ),
+                },
             )
             st.error(error_text)
 
-    render_audit_panel()
+    render_audit_panel(role)
 
 
 if __name__ == "__main__":
