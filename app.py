@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
-from mcp.query_history import load_query_history, save_query_record
+from data_access.query_history import load_query_history, save_query_record
 
 from agent_system.constants import (
     AGENT_MANAGER,
@@ -92,7 +92,7 @@ st.set_page_config(
     page_title="Agente Corporativo IA",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ---------------------------------------------------------------------
@@ -181,6 +181,9 @@ def ensure_role_history_loaded(role: str) -> None:
                 "nodo_ejecutado": record["agent_name"],
                 "agente_encargado": AGENT_MANAGER,
                 "motivo_designacion": record["designation_reason"],
+                "cycle_count": record["cycle_count"],
+                "evaluation_decision": record["evaluation_decision"],
+                "evaluation_reason": record["evaluation_reason"],
                 "input_usuario": record["user_query"],
                 "respuesta_asistente": record["assistant_response"],
                 "tool_traces": record["tool_traces"],
@@ -225,54 +228,162 @@ def render_logo() -> None:
         )
 
 
-def render_sidebar() -> str:
-    st.sidebar.title("Agente Corporativo IA")
-    render_logo()
-
-    st.sidebar.subheader("Iniciar Sesión como:")
-    selected_label = st.sidebar.selectbox(
-        "Iniciar Sesión como:",
-        list(ROLE_OPTIONS.keys()),
-        index=list(ROLE_OPTIONS.keys()).index(st.session_state.selected_role_label)
-        if st.session_state.selected_role_label in ROLE_OPTIONS
-        else 0,
-        key="role_selector",
+def render_topbar() -> str:
+    """Renderiza una cabecera horizontal compacta y siempre visible."""
+    st.markdown(
+        """
+        <style>
+        .st-key-agent_topbar {
+            position: fixed;
+            top: 2.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(calc(100vw - 2rem), 1380px);
+            z-index: 1000001;
+            background: Canvas;
+            color: CanvasText;
+            border: 1px solid rgba(128, 128, 128, 0.28);
+            border-radius: 0.65rem;
+            box-shadow: 0 0.2rem 0.8rem rgba(0, 0, 0, 0.12);
+            backdrop-filter: blur(12px);
+            padding: 0.35rem 0.75rem;
+            overflow: hidden;
+        }
+        .st-key-agent_topbar [data-testid="stVerticalBlock"] {
+            gap: 0.2rem;
+        }
+        .st-key-agent_topbar [data-testid="stHorizontalBlock"] {
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        .st-key-agent_topbar [data-testid="column"] {
+            min-width: 0;
+            overflow: hidden;
+        }
+        .st-key-agent_topbar h3,
+        .st-key-agent_topbar h4 {
+            margin: 0;
+            padding: 0;
+            font-size: 0.92rem;
+            line-height: 1.15;
+        }
+        .st-key-agent_topbar [data-testid="stAlert"] {
+            padding: 0.3rem 0.5rem;
+            min-height: 0;
+        }
+        .st-key-agent_topbar [data-testid="stAlert"] p,
+        .st-key-agent_topbar [data-testid="stCaptionContainer"],
+        .st-key-agent_topbar label {
+            font-size: 0.74rem;
+            line-height: 1.1;
+        }
+        .st-key-agent_topbar p {
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+        .st-key-agent_topbar [data-testid="stImage"] img {
+            max-height: 38px;
+            object-fit: contain;
+        }
+        .st-key-agent_topbar [data-baseweb="select"] > div {
+            min-height: 1.9rem;
+            font-size: 0.8rem;
+        }
+        .agent-topbar-spacer {
+            height: 7.5rem;
+        }
+        .agent-brand-name {
+            margin: 0;
+            font-size: 0.88rem;
+            font-weight: 700;
+            line-height: 1.05;
+            white-space: nowrap;
+        }
+        @media (max-width: 768px) {
+            .st-key-agent_topbar {
+                top: 0.5rem;
+                width: calc(100vw - 1rem);
+                max-height: 48vh;
+                overflow-y: auto;
+            }
+            .agent-topbar-spacer {
+                height: 11rem;
+            }
+            .agent-brand-name {
+                white-space: normal;
+                font-size: 0.72rem;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.session_state.selected_role_label = selected_label
-    role = role_to_internal(selected_label)
+    with st.container(key="agent_topbar"):
+        brand_column, status_column, role_column = st.columns(
+            [1.45, 3.7, 1.65],
+            vertical_alignment="center",
+        )
 
-    st.sidebar.markdown("### 🔐 Observabilidad de permisos")
-    perms = ROLE_PERMISSIONS[role]
+        with brand_column:
+            logo_column, name_column = st.columns(
+                [0.42, 1.58],
+                vertical_alignment="center",
+            )
+            with logo_column:
+                if LOGO_PATH.exists():
+                    st.image(str(LOGO_PATH), width=38)
+                else:
+                    st.markdown("🤖")
+            with name_column:
+                st.markdown(
+                    '<p class="agent-brand-name">Agente Corporativo IA</p>',
+                    unsafe_allow_html=True,
+                )
 
-    st.sidebar.info(
-        f"**Rol actual:** {perms['badge']}\n\n"
-        f"**Manuales simples:** {perms['Manuales simples']}\n\n"
-        f"**Manuales complejos:** {perms['Manuales complejos']}\n\n"
-        f"**SQLite empleados:** {perms['SQLite empleados']}"
+        with role_column:
+            selected_label = st.selectbox(
+                "Rol de acceso",
+                list(ROLE_OPTIONS.keys()),
+                index=list(ROLE_OPTIONS.keys()).index(
+                    st.session_state.selected_role_label
+                )
+                if st.session_state.selected_role_label in ROLE_OPTIONS
+                else 0,
+                key="role_selector",
+                label_visibility="collapsed",
+            )
+
+        st.session_state.selected_role_label = selected_label
+        role = role_to_internal(selected_label)
+        perms = ROLE_PERMISSIONS[role]
+
+        with status_column:
+            trace_status = "activa" if st.session_state.langsmith_enabled else "inactiva"
+            st.markdown(
+                f"**🔐 {perms['badge']}** · Trazabilidad {trace_status}"
+            )
+
+        permission_columns = st.columns(3)
+        permission_items = (
+            ("📘 Manuales simples", perms["Manuales simples"]),
+            ("📚 Manuales complejos", perms["Manuales complejos"]),
+            ("🗃️ SQLite empleados", perms["SQLite empleados"]),
+        )
+        for column, (label, value) in zip(permission_columns, permission_items):
+            with column:
+                st.info(f"**{label}:** {value}")
+
+    st.markdown(
+        '<div class="agent-topbar-spacer" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
     )
-
-    st.sidebar.caption(
-        "La interfaz cambia según el rol, pero la política real se aplica también en MCP y en el grafo."
-    )
-
-    st.sidebar.divider()
-    st.sidebar.markdown("### 📊 LangSmith")
-    if st.session_state.langsmith_enabled:
-        project = os.getenv("LANGSMITH_PROJECT", "proyecto_coder")
-        st.sidebar.success(f"✅ Trazabilidad activa\n\nProyecto: `{project}`")
-        st.sidebar.caption("Ver en: https://smith.langchain.com")
-    else:
-        st.sidebar.warning("⚠️ LangSmith desactivado")
-
     return role
 
 
 def render_header(role: str) -> None:
-    st.title("🤖 Agente Corporativo IA")
-    st.write(
-        "Bienvenido al Agente Corporativo IA"
-    )
+    st.caption("Asistente corporativo con acceso controlado por rol")
 
     if role == ROLE_INVITADO:
         st.markdown("### Temas disponibles en los manuales simples")
@@ -324,6 +435,12 @@ def append_audit_entry(
         "nodo_ejecutado": agente_designado,
         "agente_encargado": AGENT_MANAGER,
         "motivo_designacion": motivo_designacion,
+        "cycle_count": int(result_state.get("cycle_count", 1)),
+        "evaluation_decision": result_state.get("evaluation_decision", "end"),
+        "evaluation_reason": result_state.get(
+            "evaluation_reason",
+            "Evaluación no informada por el grafo.",
+        ),
         "input_usuario": user_text,
         "respuesta_asistente": ai_text,
         "tool_traces": tool_traces,
@@ -335,6 +452,9 @@ def append_audit_entry(
         assistant_response=ai_text,
         designation_reason=motivo_designacion,
         tool_traces=tool_traces,
+        cycle_count=entry["cycle_count"],
+        evaluation_decision=entry["evaluation_decision"],
+        evaluation_reason=entry["evaluation_reason"],
     )
     entry["record_id"] = record_id
     role_audit_log(role).append(entry)
@@ -358,6 +478,13 @@ def render_audit_panel(role: str) -> None:
         st.markdown(f"**Agente encargado:** `{last.get('agente_encargado', AGENT_MANAGER)}`")
         st.markdown(f"**Nodo LangGraph ejecutado:** `{last['nodo_ejecutado']}`")
         st.markdown(f"**Motivo de designacion:** {last.get('motivo_designacion', 'No informado.')}")
+        st.markdown(
+            f"**Ciclos ejecutados:** `{last.get('cycle_count', 1)}` · "
+            f"**Decisión:** `{last.get('evaluation_decision', 'end')}`"
+        )
+        st.markdown(
+            f"**Evaluación:** {last.get('evaluation_reason', 'No informada.')}"
+        )
 
         st.markdown("**Entrada del usuario:**")
         st.code(last["input_usuario"], language="text")
@@ -486,7 +613,7 @@ def main() -> None:
     logger = logging.getLogger("agente_corporativo.app")
 
     init_session_state()
-    role = render_sidebar()
+    role = render_topbar()
     ensure_role_history_loaded(role)
     render_header(role)
 

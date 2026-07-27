@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from mcp.config import logger
+from data_access.config import logger
 
 EMPLEADO_COLUMNS = (
     "DNI",

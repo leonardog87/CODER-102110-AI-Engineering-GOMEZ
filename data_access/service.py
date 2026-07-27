@@ -1,4 +1,4 @@
-"""Fachada pública del servidor MCP del Agente Corporativo IA.
+"""Servicio interno de consultas seguras del Agente Corporativo IA.
 
 La API publica se mantiene estable:
     mcp_execute_query(tabla, filtros, agente_rol)
@@ -10,15 +10,15 @@ import json
 import sqlite3
 from typing import Any, Dict
 
-from mcp.config import (
+from data_access.config import (
     ALLOWED_TABLES,
     EMPLEADOS_CSV_PATH,
     SQLITE_DB_PATH,
     logger,
 )
-from mcp.database import get_connection, migrate_empleados_to_sqlite
-from mcp.queries import get_aggregated_data, list_tables, preview_table
-from mcp.security import response, sanitize_employee_output
+from data_access.database import get_connection, migrate_empleados_to_sqlite
+from data_access.queries import get_aggregated_data, list_tables, preview_table
+from data_access.security import response, sanitize_employee_output
 
 __all__ = [
     "ALLOWED_TABLES",
@@ -38,6 +38,7 @@ def _run_role_query(
     filtros: Dict[str, Any],
     include_stats: bool,
     hide_salaries: bool,
+    limit: int,
 ) -> Dict[str, Any]:
     conn = get_connection()
     aggregated = get_aggregated_data(
@@ -45,6 +46,7 @@ def _run_role_query(
         tabla,
         filtros,
         include_stats=include_stats,
+        sample_limit=limit,
     )
 
     if hide_salaries:
@@ -59,7 +61,12 @@ def _run_role_query(
     )
 
 
-def mcp_execute_query(tabla: str, filtros: dict, agente_rol: str) -> dict:
+def mcp_execute_query(
+    tabla: str,
+    filtros: dict,
+    agente_rol: str,
+    limit: int = 10,
+) -> dict:
     """Ejecuta una consulta segura con RBAC.
 
     Args:
@@ -80,6 +87,7 @@ def mcp_execute_query(tabla: str, filtros: dict, agente_rol: str) -> dict:
 
         filtros = filtros or {}
         role = str(agente_rol).strip()
+        safe_limit = max(1, min(int(limit), 100))
 
         if role == "Empleado":
             if any(key.lower() == "sueldo_ars" for key in filtros):
@@ -94,6 +102,7 @@ def mcp_execute_query(tabla: str, filtros: dict, agente_rol: str) -> dict:
                 filtros=filtros,
                 include_stats=False,
                 hide_salaries=True,
+                limit=safe_limit,
             )
 
         if role == "Administrador":
@@ -102,6 +111,7 @@ def mcp_execute_query(tabla: str, filtros: dict, agente_rol: str) -> dict:
                 filtros=filtros,
                 include_stats=True,
                 hide_salaries=False,
+                limit=safe_limit,
             )
 
         return response(

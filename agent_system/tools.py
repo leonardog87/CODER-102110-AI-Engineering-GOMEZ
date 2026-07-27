@@ -8,7 +8,6 @@ from langchain_core.tools import tool
 try:
     from rag.pipeline import retrieve_context
 except Exception:  # pragma: no cover
-
     def retrieve_context(query: str, top_k: int = 3) -> str:
         return (
             "[FALLBACK RAG] No se pudo importar rag.pipeline.retrieve_context. "
@@ -18,7 +17,6 @@ except Exception:  # pragma: no cover
 try:
     from rag.knowledge_pipeline import retrieve_knowledge_context
 except Exception:  # pragma: no cover
-
     def retrieve_knowledge_context(query: str, top_k: int = 3) -> str:
         return (
             "[FALLBACK KNOWLEDGE] No se pudo importar "
@@ -26,17 +24,7 @@ except Exception:  # pragma: no cover
             f"Consulta recibida: {query!r} | top_k={top_k}"
         )
 
-try:
-    from mcp.server import mcp_execute_query
-except Exception:  # pragma: no cover
-
-    def mcp_execute_query(tabla: str, filtros: dict, agente_rol: str) -> dict:
-        return {
-            "status_code": 500,
-            "status": "error",
-            "message": "No se pudo importar mcp.server.mcp_execute_query.",
-            "data": [],
-        }
+from agent_system.mcp_client import call_mcp_tool
 
 
 def compact_filters(**kwargs: Any) -> Dict[str, Any]:
@@ -64,14 +52,11 @@ def truncar_resultado(resultado: Dict[str, Any], max_items: int = 3) -> Dict[str
     """
     if "data" in resultado and isinstance(resultado["data"], dict):
         data = resultado["data"]
-        
-        # Si tiene "sample", usarlo en lugar de "data"
         if "sample" in data and isinstance(data["sample"], list):
             total = data.get("total", len(data["sample"]))
             if total > max_items:
                 data["sample"] = data["sample"][:max_items]
                 data["message"] = f"Mostrando {max_items} de {total} registros (muestra)"
-    
     return resultado
 
 
@@ -99,19 +84,28 @@ def _consultar_empleados(
     area: str | None,
     puesto: str | None,
 ) -> str:
-    filtros = compact_filters(
-        DNI=dni,
-        Nombre=nombre,
-        Apellido=apellido,
-        Area=area,
-        Puesto=puesto,
+    # ✅ Límite fijo interno (el usuario no necesita especificarlo)
+    LIMIT = 10
+    
+    arguments = compact_filters(
+        dni=dni,
+        nombre=nombre,
+        apellido=apellido,
+        area=area,
+        puesto=puesto,
+        limit=LIMIT,
     )
-    resultado = mcp_execute_query(
-        tabla="empleados",
-        filtros=filtros,
-        agente_rol=agente_rol,
+    resultado = call_mcp_tool(
+        role=agente_rol,
+        tool_name="consultar_empleados",
+        arguments=arguments,
     )
-    return safe_json(truncar_resultado(resultado, max_items=5))
+    return safe_json(
+        truncar_resultado(
+            resultado,
+            max_items=LIMIT,
+        )
+    )
 
 
 @tool("consultar_empleados_mcp_empleado")
@@ -122,7 +116,15 @@ def consultar_empleados_mcp_empleado(
     area: str | None = None,
     puesto: str | None = None,
 ) -> str:
-    """Consulta empleados sin exponer salarios ni estadísticas salariales."""
+    """Consulta empleados sin exponer salarios ni estadísticas salariales.
+    
+    Args:
+        dni: Filtrar por DNI (opcional)
+        nombre: Filtrar por nombre (opcional)
+        apellido: Filtrar por apellido (opcional)
+        area: Filtrar por área (opcional)
+        puesto: Filtrar por puesto (opcional)
+    """
     return _consultar_empleados(
         agente_rol="Empleado",
         dni=dni,
@@ -141,7 +143,15 @@ def consultar_empleados_mcp_administrador(
     area: str | None = None,
     puesto: str | None = None,
 ) -> str:
-    """Consulta completa de empleados, incluidos salarios y estadísticas."""
+    """Consulta completa de empleados, incluidos salarios y estadísticas.
+    
+    Args:
+        dni: Filtrar por DNI (opcional)
+        nombre: Filtrar por nombre (opcional)
+        apellido: Filtrar por apellido (opcional)
+        area: Filtrar por área (opcional)
+        puesto: Filtrar por puesto (opcional)
+    """
     return _consultar_empleados(
         agente_rol="Administrador",
         dni=dni,

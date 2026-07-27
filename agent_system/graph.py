@@ -14,6 +14,10 @@ from agent_system.constants import (
     AGENT_MANAGER,
 )
 from agent_system.empleado_agent import agente_empleado
+from agent_system.evaluator_agent import (
+    enrutar_despues_evaluacion,
+    evaluar_respuesta,
+)
 from agent_system.invitado_agent import agente_invitado
 from agent_system.manager_agent import agente_encargado, enrutar_por_designacion
 from agent_system.state import AgentState
@@ -26,6 +30,7 @@ builder.add_node(AGENT_MANAGER, agente_encargado)
 builder.add_node(AGENT_INVITADO, agente_invitado)
 builder.add_node(AGENT_EMPLEADO, agente_empleado)
 builder.add_node(AGENT_ADMINISTRADOR, agente_administrador)
+builder.add_node("evaluador_respuesta", evaluar_respuesta)
 
 builder.add_edge(START, AGENT_MANAGER)
 builder.add_conditional_edges(
@@ -38,8 +43,16 @@ builder.add_conditional_edges(
     },
 )
 
-builder.add_edge(AGENT_INVITADO, END)
-builder.add_edge(AGENT_EMPLEADO, END)
-builder.add_edge(AGENT_ADMINISTRADOR, END)
+builder.add_edge(AGENT_INVITADO, "evaluador_respuesta")
+builder.add_edge(AGENT_EMPLEADO, "evaluador_respuesta")
+builder.add_edge(AGENT_ADMINISTRADOR, "evaluador_respuesta")
+builder.add_conditional_edges(
+    "evaluador_respuesta",
+    enrutar_despues_evaluacion,
+    {
+        "retry": AGENT_MANAGER,
+        "end": END,
+    },
+)
 
 app_graph = builder.compile()

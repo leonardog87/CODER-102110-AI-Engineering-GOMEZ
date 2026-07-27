@@ -1,4 +1,4 @@
-"""Helpers de seguridad y respuestas para MCP."""
+"""Helpers de seguridad para respuestas de acceso a datos."""
 
 from __future__ import annotations
 

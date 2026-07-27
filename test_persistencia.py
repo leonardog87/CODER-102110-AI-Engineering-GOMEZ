@@ -11,15 +11,15 @@ from uuid import uuid4
 WORKSPACE = Path(__file__).resolve().parent
 TEST_DB = WORKSPACE / "data" / f"test_persistencia_{uuid4().hex}.sqlite3"
 
-# Debe configurarse antes de importar mcp.config/mcp.database.
+# Debe configurarse antes de importar data_access.config/database.
 os.environ["AGENTE_CORPORATIVO_DB"] = str(TEST_DB)
 os.environ["EMPLEADOS_CSV"] = str(WORKSPACE / "raw_data" / "empleados.csv")
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["LANGSMITH_TRACING"] = "false"
 
-from mcp.database import close_connection  # noqa: E402
-from mcp.query_history import load_query_history, save_query_record  # noqa: E402
-from mcp.server import mcp_execute_query  # noqa: E402
+from data_access.database import close_connection  # noqa: E402
+from data_access.query_history import load_query_history, save_query_record  # noqa: E402
+from data_access.service import mcp_execute_query  # noqa: E402
 
 
 def assert_chroma_persistence() -> None:

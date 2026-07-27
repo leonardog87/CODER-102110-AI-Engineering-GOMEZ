@@ -9,6 +9,7 @@ from langgraph.graph.message import add_messages
 
 UserRole = Literal["Invitado", "Empleado", "Administrador"]
 AgentName = Literal["agente_invitado", "agente_empleado", "agente_administrador"]
+EvaluationDecision = Literal["retry", "end"]
 
 
 class AgentState(TypedDict, total=False):
@@ -18,3 +19,6 @@ class AgentState(TypedDict, total=False):
     rol_usuario: UserRole
     agente_designado: AgentName
     motivo_designacion: str
+    cycle_count: int
+    evaluation_decision: EvaluationDecision
+    evaluation_reason: str

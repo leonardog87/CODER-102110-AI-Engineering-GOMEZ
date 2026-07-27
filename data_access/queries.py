@@ -5,8 +5,8 @@ from __future__ import annotations
 import sqlite3
 from typing import Any, Dict, Iterable, List
 
-from mcp.config import ALLOWED_TABLES, logger
-from mcp.database import get_connection
+from data_access.config import ALLOWED_TABLES, logger
+from data_access.database import get_connection
 
 
 def rows_to_dicts(rows: Iterable[sqlite3.Row]) -> List[Dict[str, Any]]:
@@ -55,6 +55,7 @@ def get_aggregated_data(
     tabla: str,
     filtros: Dict[str, Any],
     include_stats: bool = False,
+    sample_limit: int = 10,
 ) -> Dict[str, Any]:
     """Devuelve total, muestra y estadisticas opcionales para una tabla."""
     logger.info(
@@ -84,6 +85,7 @@ def get_aggregated_data(
             "message": "No se encontraron registros.",
         }
 
+    safe_limit = max(1, min(int(sample_limit), 100))
     if tabla == "empleados":
         sample_sql = f"""
             SELECT
@@ -94,12 +96,12 @@ def get_aggregated_data(
                 Puesto,
                 Sueldo_ARS
             FROM {tabla}{query_where}
-            LIMIT 10
+            LIMIT ?
         """
     else:
         sample_sql = f"SELECT * FROM {tabla}{query_where} LIMIT 10"
 
-    cursor = conn.execute(sample_sql, params)
+    cursor = conn.execute(sample_sql, [*params, safe_limit])
     sample = rows_to_dicts(cursor.fetchall())
     stats = get_table_stats(conn, tabla, query_where, params) if include_stats else {}
 

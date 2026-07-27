@@ -55,24 +55,41 @@ def _ensure_valid_response(
 
 
 def _truncate_tool_result_if_needed(content: str, max_chars: int = 1500) -> str:
-    """
-    Trunca el resultado de una herramienta si es demasiado largo.
-    """
+    """Reduce muestras grandes sin romper el JSON ni perder total/estadísticas."""
     if not isinstance(content, str) or len(content) <= max_chars:
         return content
-    
+
     try:
-        data = json.loads(content)
-        if isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
-            total = len(data["data"])
-            if total > 3:
-                data["data"] = data["data"][:3]
-                data["total_items"] = total
-                data["message"] = f"Mostrando 3 de {total} resultados (truncado)"
-                return json.dumps(data, ensure_ascii=False, default=str)
+        payload = json.loads(content)
     except (json.JSONDecodeError, TypeError):
-        pass
-    
+        return content[:max_chars] + "... [RESULTADO TRUNCADO]"
+
+    if not isinstance(payload, dict):
+        return content[:max_chars] + "... [RESULTADO TRUNCADO]"
+
+    aggregated = payload.get("data")
+    if isinstance(aggregated, dict) and isinstance(aggregated.get("sample"), list):
+        sample = list(aggregated["sample"])
+        original_sample_size = len(sample)
+        while sample:
+            aggregated["sample"] = sample
+            serialized = json.dumps(payload, ensure_ascii=False, default=str)
+            if len(serialized) <= max_chars:
+                if len(sample) < original_sample_size:
+                    aggregated["message"] = (
+                        f"Total: {aggregated.get('total', 0)}. "
+                        f"Muestra reducida a {len(sample)} registros para el modelo."
+                    )
+                return json.dumps(payload, ensure_ascii=False, default=str)
+            sample.pop()
+
+        aggregated["sample"] = []
+        aggregated["message"] = (
+            f"Total: {aggregated.get('total', 0)}. "
+            "La muestra se omitió por tamaño; total y estadísticas se conservaron."
+        )
+        return json.dumps(payload, ensure_ascii=False, default=str)
+
     return content[:max_chars] + "... [RESULTADO TRUNCADO]"
 
 
@@ -156,6 +173,20 @@ def _looks_like_text_tool_call(content: Any) -> bool:
     return bool(_tool_calls_from_text(content))
 
 
+def _is_count_query(text: str) -> bool:
+    normalized = _normalize_text(text)
+    return any(
+        expression in normalized
+        for expression in (
+            "cantidad de empleado",
+            "cuantos empleado",
+            "cuantas empleado",
+            "total de empleado",
+            "numero de empleado",
+        )
+    )
+
+
 def _format_tool_result_for_user(
     tool_messages: List[ToolMessage],
     user_text: str = "",
@@ -195,6 +226,9 @@ def _format_tool_result_for_user(
             lines.append(f"📊 Total de registros encontrados: **{total}**")
         else:
             return "No se encontraron resultados para la consulta."
+
+        if _is_count_query(user_text):
+            return f"Hay **{total} empleados** registrados en total."
         
         if stats:
             if "total_sueldos" in stats:
@@ -344,6 +378,26 @@ def invoke_specialist_agent(
                 first_ai.content = clean_content
                 new_messages[0] = first_ai
 
+    # Las consultas estructuradas autorizadas no pueden depender de que el LLM
+    # decida voluntariamente usar MCP. Si respondió sin herramienta, el runtime
+    # aplica la política y genera la llamada obligatoria.
+    if not tool_calls and tools:
+        direct_call = _direct_tool_call_for_structured_query(messages, tools)
+        if direct_call:
+            if direct_call.get("error"):
+                return {
+                    "messages": [
+                        AIMessage(content=str(direct_call["error"]))
+                    ]
+                }
+            tool_calls = [direct_call]
+            first_ai = AIMessage(content="", tool_calls=tool_calls)
+            new_messages[0] = first_ai
+            logger.info(
+                "Consulta estructurada: uso de MCP forzado por política (%s)",
+                direct_call["name"],
+            )
+
     # ──────────────────────────────────────────────────────────
     # 4. SI NO HAY TOOL CALLS: El LLM ya respondió directamente
     # ──────────────────────────────────────────────────────────
@@ -406,7 +460,15 @@ def invoke_specialist_agent(
         final_content = getattr(final_ai, "content", "") or ""
         final_tool_calls = getattr(final_ai, "tool_calls", None) or []
         
-        if final_tool_calls:
+        if _is_count_query(_last_human_text(messages)):
+            final_ai = AIMessage(
+                content=_format_tool_result_for_user(
+                    tool_messages,
+                    user_text=_last_human_text(messages),
+                )
+            )
+            logger.info("Conteo estructurado: respuesta determinista desde MCP")
+        elif final_tool_calls:
             logger.warning("⚠️ El LLM generó otro tool call nativo, forzando fallback")
             fallback_content = _format_tool_result_for_user(
                 tool_messages,

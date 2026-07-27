@@ -9,7 +9,11 @@ from __future__ import annotations
 
 import json
 
-from mcp.server import SQLITE_DB_PATH, get_connection, migrate_empleados_to_sqlite
+from data_access.service import (
+    SQLITE_DB_PATH,
+    get_connection,
+    migrate_empleados_to_sqlite,
+)
 
 
 def main() -> None:

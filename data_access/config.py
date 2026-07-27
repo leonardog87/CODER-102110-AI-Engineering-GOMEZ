@@ -1,4 +1,4 @@
-"""Configuracion compartida para el modulo MCP."""
+"""Configuración compartida para el acceso a datos."""
 
 from __future__ import annotations
 

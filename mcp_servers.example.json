@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "agente-corporativo-invitado": {
+      "command": "python",
+      "args": [
+        "mcp_server.py",
+        "--role",
+        "Invitado",
+        "--transport",
+        "stdio"
+      ]
+    },
+    "agente-corporativo-empleado": {
+      "command": "python",
+      "args": [
+        "mcp_server.py",
+        "--role",
+        "Empleado",
+        "--transport",
+        "stdio"
+      ]
+    },
+    "agente-corporativo-administrador": {
+      "command": "python",
+      "args": [
+        "mcp_server.py",
+        "--role",
+        "Administrador",
+        "--transport",
+        "stdio"
+      ]
+    }
+  }
+}

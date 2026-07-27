@@ -8,13 +8,13 @@ from typing import Optional
 
 import pandas as pd
 
-from mcp.config import (
+from data_access.config import (
     ALLOWED_TABLES,
     EMPLEADOS_CSV_PATH,
     SQLITE_DB_PATH,
     logger,
 )
-from mcp.csv_loader import (
+from data_access.csv_loader import (
     EMPLEADO_COLUMNS,
     normalize_dataframe,
     read_empleados_csv,

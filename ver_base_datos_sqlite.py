@@ -15,7 +15,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Sequence
 
-from mcp.config import SQLITE_DB_PATH
+from data_access.config import SQLITE_DB_PATH
 
 
 def parse_args() -> argparse.Namespace:
