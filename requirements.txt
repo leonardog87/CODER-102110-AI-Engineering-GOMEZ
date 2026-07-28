@@ -8,6 +8,8 @@ langchain-huggingface
 langchain-openai
 faiss-cpu
 langsmith
+agentevals>=0.0.9,<0.1
+openevals>=0.2,<0.3
 chromadb
 langchain-chroma
 pypdf
