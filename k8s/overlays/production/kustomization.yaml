@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - ingress.yaml
+images:
+  - name: ciudad-analitica
+    newName: ghcr.io/replace-with-owner/ciudad-analitica
+    newTag: latest

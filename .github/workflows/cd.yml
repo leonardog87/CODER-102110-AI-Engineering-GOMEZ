@@ -1,0 +1,148 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  verify:
+    name: Release checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      LANGSMITH_TRACING: "false"
+      LANGCHAIN_TRACING_V2: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Verify release
+        run: |
+          python -m compileall -q .
+          python test_persistencia.py
+          python test_mcp_protocol.py
+
+  publish:
+    name: Publish production image
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      image: ${{ steps.image.outputs.ref }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Build and publish image
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate build provenance
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Export immutable image reference
+        id: image
+        shell: bash
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: echo "ref=${REGISTRY}/${IMAGE_NAME}@${DIGEST}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy to Kubernetes
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+    env:
+      KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+      K8S_HOST: ${{ secrets.K8S_HOST }}
+      IMAGE: ${{ needs.publish.outputs.image }}
+    steps:
+      - name: Deployment not configured
+        if: ${{ env.KUBE_CONFIG_B64 == '' || env.K8S_HOST == '' }}
+        run: |
+          echo "::notice::Image published; Kubernetes deploy skipped."
+          echo "Configure KUBE_CONFIG_B64 and K8S_HOST in the production environment."
+
+      - name: Checkout
+        if: ${{ env.KUBE_CONFIG_B64 != '' && env.K8S_HOST != '' }}
+        uses: actions/checkout@v6
+
+      - name: Set up kubectl
+        if: ${{ env.KUBE_CONFIG_B64 != '' && env.K8S_HOST != '' }}
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure cluster access
+        if: ${{ env.KUBE_CONFIG_B64 != '' && env.K8S_HOST != '' }}
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.kube"
+          printf '%s' "$KUBE_CONFIG_B64" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Deploy immutable image
+        if: ${{ env.KUBE_CONFIG_B64 != '' && env.K8S_HOST != '' }}
+        shell: bash
+        run: |
+          kubectl get secret ciudad-analitica-secrets -n ciudad-analitica
+          sed -i "s/ciudad-analitica.example.com/${K8S_HOST}/g" \
+            k8s/overlays/production/ingress.yaml
+          cd k8s/overlays/production
+          kubectl kustomize edit set image "ciudad-analitica=${IMAGE}"
+          kubectl apply -k .
+          kubectl rollout status deployment/ciudad-analitica \
+            -n ciudad-analitica --timeout=10m

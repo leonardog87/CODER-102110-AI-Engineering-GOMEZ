@@ -59,7 +59,10 @@ os.environ["LANGCHAIN_PROJECT"] = langsmith_project
 logger.info("=" * 60)
 logger.info("🔍 CONFIGURACIÓN DE LANGSMITH")
 logger.info(f"  LANGSMITH_TRACING: {os.environ.get('LANGSMITH_TRACING')}")
-logger.info(f"  LANGSMITH_API_KEY: {os.environ.get('LANGSMITH_API_KEY')[:20] if os.environ.get('LANGSMITH_API_KEY') else 'NO DEFINIDA'}...")
+logger.info(
+    "  LANGSMITH_API_KEY: %s",
+    "CONFIGURADA" if os.environ.get("LANGSMITH_API_KEY") else "NO DEFINIDA",
+)
 logger.info(f"  LANGSMITH_PROJECT: {os.environ.get('LANGSMITH_PROJECT')}")
 logger.info(f"  LANGCHAIN_TRACING_V2: {os.environ.get('LANGCHAIN_TRACING_V2')}")
 logger.info("=" * 60)

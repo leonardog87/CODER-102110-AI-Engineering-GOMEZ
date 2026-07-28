@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ciudad-analitica
+  namespace: ciudad-analitica
+  labels:
+    app.kubernetes.io/name: ciudad-analitica
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ciudad-analitica
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ciudad-analitica
+  namespace: ciudad-analitica
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          imagePullPolicy: Never
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 4Gi
