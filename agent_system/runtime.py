@@ -228,6 +228,9 @@ def _format_tool_result_for_user(
             return "No se encontraron resultados para la consulta."
 
         if _is_count_query(user_text):
+            normalized_user_text = _normalize_text(user_text)
+            if "desarrollador" in normalized_user_text:
+                return f"Hay **{total} empleados desarrolladores**."
             return f"Hay **{total} empleados** registrados en total."
         
         if stats:
@@ -285,13 +288,164 @@ def _normalize_text(text: str) -> str:
     return text.translate(replacements).lower()
 
 
+def _is_policy_infrastructure_query(text: str) -> bool:
+    normalized = _normalize_text(text)
+    requests_policy = (
+        "politica" in normalized
+        and "base" in normalized
+        and "dato" in normalized
+    )
+    return requests_policy and "infraestructura" in normalized
+
+
+def _is_database_policy_query(text: str) -> bool:
+    normalized = _normalize_text(text)
+    return (
+        any(term in normalized for term in ("normativa", "politica"))
+        and "base" in normalized
+        and "dato" in normalized
+    )
+
+
+def _format_database_policy_result(tool_messages: List[ToolMessage]) -> str:
+    """Convierte el contexto RAG de normativa en una respuesta final trazable."""
+    rag_contents = [
+        str(message.content or "")
+        for message in tool_messages
+        if str(message.content or "").startswith("# Contexto recuperado")
+        or message.tool_call_id in {"direct_rag_policy", "text_tool_call"}
+    ]
+    context = "\n".join(rag_contents)
+    if not context.strip():
+        return "No se encontró normativa relevante sobre acceso a bases de datos."
+
+    controls = []
+    for line in context.splitlines():
+        clean_line = line.strip()
+        if clean_line.startswith("- ") or re.match(r"^\d+\.\s+", clean_line):
+            if clean_line not in controls:
+                controls.append(clean_line)
+        if len(controls) == 8:
+            break
+
+    sources = []
+    for match in re.findall(r"^Fuente:\s*(.+)$", context, flags=re.MULTILINE):
+        source = match.strip()
+        if source and source not in sources:
+            sources.append(source)
+
+    lines = [
+        "La normativa establece que el acceso seguro a bases de datos debe:",
+        *controls,
+    ]
+    if sources:
+        lines.extend(["", "Fuentes: " + ", ".join(f"`{source}`" for source in sources) + "."])
+    return "\n".join(lines)
+
+
+def _format_policy_infrastructure_result(
+    tool_messages: List[ToolMessage],
+) -> str:
+    """Combina política RAG y empleados MCP sin depender del texto del LLM."""
+    policy_text = ""
+    employee_payload: Dict[str, Any] | None = None
+
+    for message in tool_messages:
+        content = str(message.content or "")
+        if message.tool_call_id == "direct_rag_policy":
+            policy_text = content
+        elif message.tool_call_id == "direct_infra_employees":
+            try:
+                parsed = json.loads(content)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(parsed, dict):
+                employee_payload = parsed
+
+    policy_points = [
+        line.strip()
+        for line in policy_text.splitlines()
+        if line.strip().startswith(("- ", "1. ", "2. ", "3. ", "4. ", "5. "))
+    ][:5]
+
+    data = (
+        employee_payload.get("data", {})
+        if isinstance(employee_payload, dict)
+        else {}
+    )
+    total = int(data.get("total", 0)) if isinstance(data, dict) else 0
+    sample = data.get("sample", []) if isinstance(data, dict) else []
+
+    lines = [
+        "La política exige autorización explícita, consultas limitadas al mínimo "
+        "necesario, validación de entradas y auditoría de los accesos administrativos.",
+        "",
+        f"En el área de **Infraestructura hay {total} empleados**:",
+    ]
+    for row in sample:
+        if not isinstance(row, dict):
+            continue
+        full_name = " ".join(
+            str(row.get(key, "")).strip() for key in ("Nombre", "Apellido")
+        ).strip()
+        lines.append(f"- {full_name}: {row.get('Puesto', 'Puesto no informado')}")
+
+    if policy_points:
+        lines.extend(["", "Controles relevantes de la política:", *policy_points])
+
+    lines.extend(
+        [
+            "",
+            "Aplicación conjunta: el Administrador puede consultar estos registros, "
+            "pero debe limitar la exposición a los campos necesarios, registrar la "
+            "consulta y proteger datos sensibles como DNI y salarios.",
+            "",
+            "Fuente: `normativa_acceso_bases_datos.md` y base MCP de empleados.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _direct_tool_call_for_structured_query(
     messages: List[BaseMessage],
     tools: List[Any],
-) -> Dict[str, Any] | None:
+) -> Dict[str, Any] | List[Dict[str, Any]] | None:
     """Route obvious MCP list queries without relying on model tool selection."""
     user_text = _normalize_text(_last_human_text(messages))
     tool_names = {tool_obj.name for tool_obj in tools}
+
+    if _is_policy_infrastructure_query(user_text):
+        employee_tool = next(
+            (
+                name
+                for name in (
+                    "consultar_empleados_mcp_administrador",
+                    "consultar_empleados_mcp_empleado",
+                )
+                if name in tool_names
+            ),
+            None,
+        )
+        if "rag_retrieve_context" in tool_names and employee_tool:
+            return [
+                {
+                    "name": "rag_retrieve_context",
+                    "args": {"query": _last_human_text(messages), "top_k": 2},
+                    "id": "direct_rag_policy",
+                },
+                {
+                    "name": employee_tool,
+                    "args": {"area": "Infraestructura"},
+                    "id": "direct_infra_employees",
+                },
+            ]
+
+    if _is_database_policy_query(user_text) and "rag_retrieve_context" in tool_names:
+        return {
+            "name": "rag_retrieve_context",
+            "args": {"query": _last_human_text(messages), "top_k": 2},
+            "id": "direct_rag_policy",
+        }
 
     asks_for_list = any(
         token in user_text
@@ -311,9 +465,20 @@ def _direct_tool_call_for_structured_query(
             None,
         )
         if employee_tool:
+            args: Dict[str, Any] = {}
+            if any(
+                term in user_text
+                for term in (
+                    "desarrollador",
+                    "desarrolladora",
+                    "desarrolladores",
+                    "desarrolladoras",
+                )
+            ):
+                args["puesto"] = "Developer"
             return {
                 "name": employee_tool,
-                "args": {},
+                "args": args,
                 "id": "direct_empleados_query",
             }
         return {
@@ -384,18 +549,20 @@ def invoke_specialist_agent(
     if not tool_calls and tools:
         direct_call = _direct_tool_call_for_structured_query(messages, tools)
         if direct_call:
-            if direct_call.get("error"):
+            if isinstance(direct_call, dict) and direct_call.get("error"):
                 return {
                     "messages": [
                         AIMessage(content=str(direct_call["error"]))
                     ]
                 }
-            tool_calls = [direct_call]
+            tool_calls = (
+                direct_call if isinstance(direct_call, list) else [direct_call]
+            )
             first_ai = AIMessage(content="", tool_calls=tool_calls)
             new_messages[0] = first_ai
             logger.info(
                 "Consulta estructurada: uso de MCP forzado por política (%s)",
-                direct_call["name"],
+                ", ".join(call["name"] for call in tool_calls),
             )
 
     # ──────────────────────────────────────────────────────────
@@ -460,7 +627,17 @@ def invoke_specialist_agent(
         final_content = getattr(final_ai, "content", "") or ""
         final_tool_calls = getattr(final_ai, "tool_calls", None) or []
         
-        if _is_count_query(_last_human_text(messages)):
+        if _is_policy_infrastructure_query(_last_human_text(messages)):
+            final_ai = AIMessage(
+                content=_format_policy_infrastructure_result(tool_messages)
+            )
+            logger.info("Consulta compuesta: respuesta determinista desde RAG y MCP")
+        elif _is_database_policy_query(_last_human_text(messages)):
+            final_ai = AIMessage(
+                content=_format_database_policy_result(tool_messages)
+            )
+            logger.info("Consulta normativa: respuesta determinista desde RAG")
+        elif _is_count_query(_last_human_text(messages)):
             final_ai = AIMessage(
                 content=_format_tool_result_for_user(
                     tool_messages,

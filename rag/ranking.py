@@ -47,8 +47,12 @@ def _tokenize(text: str) -> List[str]:
     return [token for token in tokens if token not in STOPWORDS and len(token) > 2]
 
 
-def rerank_documents(query: str, docs: List[Document]) -> List[Tuple[Document, float]]:
-    """Ordena documentos recuperados usando una heuristica simple."""
+def rerank_documents(
+    query: str,
+    docs: List[Document],
+    vector_scores: List[float] | None = None,
+) -> List[Tuple[Document, float]]:
+    """Combina relevancia semántica, cobertura léxica y metadatos."""
     query_tokens = set(_tokenize(query))
 
     if not query_tokens:
@@ -63,7 +67,17 @@ def rerank_documents(query: str, docs: List[Document]) -> List[Tuple[Document, f
         title = f"{doc.metadata.get('source_title', '')} {doc.metadata.get('category', '')}"
         title_bonus = 0.15 if query_tokens & set(_tokenize(title)) else 0.0
         position_bonus = 1.0 / (index + 1)
-        final_score = (coverage * 0.7) + title_bonus + (position_bonus * 0.05)
+        vector_score = (
+            vector_scores[index]
+            if vector_scores is not None and index < len(vector_scores)
+            else position_bonus
+        )
+        final_score = (
+            (vector_score * 0.65)
+            + (coverage * 0.25)
+            + title_bonus
+            + (position_bonus * 0.02)
+        )
 
         ranked.append((doc, final_score))
 

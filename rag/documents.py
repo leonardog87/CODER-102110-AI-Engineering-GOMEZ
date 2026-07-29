@@ -10,7 +10,7 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from rag.config import CHUNK_OVERLAP, CHUNK_SIZE, COMPLEX_MANUALS_PATH
+from rag.config import COMPLEX_CHUNK_OVERLAP, COMPLEX_CHUNK_SIZE, COMPLEX_MANUALS_PATH
 
 SUPPORTED_EXTENSIONS = {".pdf", ".md", ".txt"}
 
@@ -89,8 +89,8 @@ def load_complex_documents() -> List[Document]:
 def get_chunked_documents() -> List[Document]:
     """Segmenta los manuales y asigna identificadores reproducibles."""
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
+        chunk_size=COMPLEX_CHUNK_SIZE,
+        chunk_overlap=COMPLEX_CHUNK_OVERLAP,
         separators=["\n\n", "\n", ". ", " ", ""],
     )
     chunks: List[Document] = []

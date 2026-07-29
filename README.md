@@ -47,9 +47,9 @@ La descripción completa está en
 | Empleado | Sí | Sí | Sí, sin salarios |
 | Administrador | Sí | Sí | Sí, incluido salario y estadísticas |
 
-La selección de rol de la interfaz es deliberadamente demostrativa. La
-evolución productiva se explica en
-[docs/presentation.md](docs/presentation.md).
+La selección manual de rol simplifica el uso local. Antes de desplegar en un
+entorno empresarial debe reemplazarse por identidad verificada, como se explica
+en [docs/architecture.md](docs/architecture.md).
 
 ## Requisitos
 
@@ -96,7 +96,7 @@ Con Docker Compose:
 docker compose up --build
 ```
 
-## Preguntas de demostración
+## Ejemplos de uso
 
 ### Invitado
 
@@ -129,6 +129,7 @@ La consulta salarial debe ser rechazada y ningún resultado MCP debe incluir
 python scripts/data/migrate_employees_to_sqlite.py
 python scripts/data/initialize_complex_vector_store.py
 python scripts/data/initialize_knowledge_vector_store.py
+python scripts/data/rebuild_knowledge_vector_store.py
 python scripts/data/inspect_sqlite_database.py
 ```
 
@@ -140,6 +141,7 @@ Las utilidades restantes están documentadas por su nombre en `scripts/data/`.
 python -m compileall -q .
 python tests/test_persistence.py
 python tests/test_mcp_protocol.py
+python tests/test_rag_retrieval.py
 .\scripts\validate-k8s.ps1
 ```
 
@@ -193,7 +195,7 @@ El índice completo está en [docs/README.md](docs/README.md).
 
 ## Estado del proyecto
 
-La arquitectura es desplegable y adecuada como demostración avanzada. Para un
-entorno empresarial se deben sustituir la selección manual de rol por identidad
+La arquitectura es desplegable. Para un entorno empresarial se deben sustituir
+la selección manual de rol por identidad
 verificada, gestionar secretos externamente, migrar SQLite a PostgreSQL,
 utilizar almacenamiento vectorial compartido e instalar monitoreo y backups.

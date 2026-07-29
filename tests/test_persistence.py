@@ -22,6 +22,17 @@ os.environ["LANGSMITH_TRACING"] = "false"
 from data_access.database import close_connection  # noqa: E402
 from data_access.query_history import load_query_history, save_query_record  # noqa: E402
 from data_access.service import mcp_execute_query  # noqa: E402
+from agent_system.runtime import (  # noqa: E402
+    _direct_tool_call_for_structured_query,
+    _format_tool_result_for_user,
+    _format_policy_infrastructure_result,
+    _format_database_policy_result,
+)
+from agent_system.tools import (  # noqa: E402
+    consultar_empleados_mcp_administrador,
+    rag_retrieve_context,
+)
+from langchain_core.messages import HumanMessage, ToolMessage  # noqa: E402
 
 
 def assert_chroma_persistence() -> None:
@@ -59,6 +70,106 @@ def assert_role_chat_persistence() -> None:
     assert "promedio_sueldo" not in employee_payload
     assert "Sueldo_ARS" in administrator_payload
     assert "promedio_sueldo" in administrator_payload
+
+    developer_result = mcp_execute_query(
+        "empleados",
+        {"Puesto": "desarrolladores"},
+        "Administrador",
+    )
+    assert developer_result["data"]["total"] == 4, developer_result
+
+    developer_area_result = mcp_execute_query(
+        "empleados",
+        {"Area": "desarrolladores"},
+        "Administrador",
+    )
+    assert developer_area_result["data"]["total"] == 4, developer_area_result
+
+    direct_call = _direct_tool_call_for_structured_query(
+        [HumanMessage(content="dime cuantos empleados son desarrolladores")],
+        [consultar_empleados_mcp_administrador],
+    )
+    assert direct_call is not None
+    assert direct_call["args"] == {"puesto": "Developer"}
+
+    formatted = _format_tool_result_for_user(
+        [
+            ToolMessage(
+                content=json.dumps(developer_result, ensure_ascii=False),
+                tool_call_id="direct_empleados_query",
+            )
+        ],
+        user_text="dime cuantos empleados son desarrolladores",
+    )
+    assert formatted == "Hay **4 empleados desarrolladores**."
+
+    composite_calls = _direct_tool_call_for_structured_query(
+        [
+            HumanMessage(
+                content=(
+                    "Combiná la política de acceso a bases de datos con la "
+                    "información del área de Infraestructura"
+                )
+            )
+        ],
+        [rag_retrieve_context, consultar_empleados_mcp_administrador],
+    )
+    assert isinstance(composite_calls, list)
+    assert [call["id"] for call in composite_calls] == [
+        "direct_rag_policy",
+        "direct_infra_employees",
+    ]
+
+    infrastructure_result = mcp_execute_query(
+        "empleados",
+        {"Area": "Infraestructura"},
+        "Administrador",
+    )
+    composite_response = _format_policy_infrastructure_result(
+        [
+            ToolMessage(
+                content="- Toda consulta debe limitarse al mínimo necesario.",
+                tool_call_id="direct_rag_policy",
+            ),
+            ToolMessage(
+                content=json.dumps(infrastructure_result, ensure_ascii=False),
+                tool_call_id="direct_infra_employees",
+            ),
+        ]
+    )
+    assert "Infraestructura hay 3 empleados" in composite_response
+    assert "mínimo necesario" in composite_response
+    assert "normativa_acceso_bases_datos.md" in composite_response
+
+    policy_calls = _direct_tool_call_for_structured_query(
+        [
+            HumanMessage(
+                content=(
+                    "¿Qué indica la normativa sobre el acceso seguro a "
+                    "bases de datos?"
+                )
+            )
+        ],
+        [rag_retrieve_context],
+    )
+    assert isinstance(policy_calls, dict)
+    assert policy_calls["id"] == "direct_rag_policy"
+
+    policy_response = _format_database_policy_result(
+        [
+            ToolMessage(
+                content=(
+                    "# Contexto recuperado\n"
+                    "Fuente: normativa_acceso_bases_datos\n"
+                    "- El acceso requiere autorización explícita.\n"
+                    "- Toda consulta debe limitarse al mínimo necesario."
+                ),
+                tool_call_id="direct_rag_policy",
+            )
+        ]
+    )
+    assert "autorización explícita" in policy_response
+    assert "mínimo necesario" in policy_response
 
     expected_queries = {
         "Invitado": "¿Cómo recupero mi contraseña?",

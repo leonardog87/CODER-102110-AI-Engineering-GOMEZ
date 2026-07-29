@@ -26,6 +26,12 @@ except Exception:  # pragma: no cover
     Chroma = None  # type: ignore
 
 
+def normalized_euclidean_relevance(distance: float) -> float:
+    """Convierte distancia euclídea normalizada en un score acotado."""
+    score = 1.0 - (float(distance) / (2.0**0.5))
+    return max(0.0, min(1.0, score))
+
+
 @lru_cache(maxsize=1)
 def get_embeddings() -> HuggingFaceEmbeddings:
     """Crea y cachea el objeto de embeddings."""
@@ -59,6 +65,7 @@ def _build_vector_store(chunks: List[Document]):
             ids=[str(chunk.metadata["chunk_id"]) for chunk in chunks],
             persist_directory=CHROMA_PERSIST_DIR,
             collection_name=CHROMA_COLLECTION_NAME,
+            relevance_score_fn=normalized_euclidean_relevance,
         )
 
         if hasattr(vector_store, "persist"):

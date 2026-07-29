@@ -12,7 +12,14 @@ from typing import Any, Dict, List
 
 from langchain_core.documents import Document
 
-from rag.config import CHUNK_OVERLAP, CHUNK_SIZE, EMBEDDING_MODEL_NAME
+from rag.config import (
+    COMPLEX_CHUNK_OVERLAP,
+    COMPLEX_CHUNK_SIZE,
+    COMPLEX_RETRIEVAL_CANDIDATES,
+    COMPLEX_RETRIEVAL_TOP_K,
+    COMPLEX_RELEVANCE_THRESHOLD,
+    EMBEDDING_MODEL_NAME,
+)
 from rag.documents import get_chunked_documents, load_complex_documents
 from rag.ranking import rerank_documents
 from rag.vector_store import get_embeddings, get_vector_store
@@ -34,12 +41,24 @@ def _get_ranked_documents(query: str, top_k: int) -> List[tuple[Document, float]
         return []
 
     vector_store = get_vector_store()
-    candidate_k = max(top_k * 2, top_k)
-    candidates = vector_store.similarity_search(clean_query, k=candidate_k)
-    return rerank_documents(clean_query, candidates)[:top_k]
+    candidate_k = max(COMPLEX_RETRIEVAL_CANDIDATES, top_k)
+    candidates = vector_store.similarity_search_with_relevance_scores(
+        clean_query,
+        k=candidate_k,
+    )
+    relevant = [
+        (document, float(score))
+        for document, score in candidates
+        if float(score) >= COMPLEX_RELEVANCE_THRESHOLD
+    ]
+    return rerank_documents(
+        clean_query,
+        [document for document, _score in relevant],
+        [score for _document, score in relevant],
+    )[:top_k]
 
 
-def retrieve_context(query: str, top_k: int = 3) -> str:
+def retrieve_context(query: str, top_k: int = COMPLEX_RETRIEVAL_TOP_K) -> str:
     """Recupera contexto relevante como texto consolidado."""
     if not (query or "").strip():
         return "Contexto recuperado: no se recibio una consulta valida."
@@ -63,7 +82,10 @@ def retrieve_context(query: str, top_k: int = 3) -> str:
     return "\n".join(lines).strip()
 
 
-def retrieve_documents(query: str, top_k: int = 3) -> List[Document]:
+def retrieve_documents(
+    query: str,
+    top_k: int = COMPLEX_RETRIEVAL_TOP_K,
+) -> List[Document]:
     """Devuelve solo los Document recuperados, sin consolidarlos."""
     return [doc for doc, _score in _get_ranked_documents(query, top_k)]
 
@@ -75,13 +97,8 @@ def get_corpus_stats() -> Dict[str, Any]:
     return {
         "documents": len(docs),
         "chunks": len(chunks),
-        "chunk_size": CHUNK_SIZE,
-        "chunk_overlap": CHUNK_OVERLAP,
+        "chunk_size": COMPLEX_CHUNK_SIZE,
+        "chunk_overlap": COMPLEX_CHUNK_OVERLAP,
         "embedding_model": EMBEDDING_MODEL_NAME,
         "documents_meta": [doc.metadata for doc in docs],
     }
-
-
-if __name__ == "__main__":
-    sample_query = "Que dice la politica sobre accesos a bases de datos y sanitizacion?"
-    print(retrieve_context(sample_query, top_k=2))

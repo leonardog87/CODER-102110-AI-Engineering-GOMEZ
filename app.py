@@ -79,7 +79,7 @@ if token:
 # Importación del grafo de agentes después de cargar el entorno.
 # ---------------------------------------------------------------------
 try:
-    from agents import app_graph
+    from agent_system import app_graph
 except Exception as exc:
     app_graph = None
     AGENTS_IMPORT_ERROR = exc
@@ -101,7 +101,6 @@ st.set_page_config(
 # ---------------------------------------------------------------------
 # Rutas solicitadas por el enunciado.
 # ---------------------------------------------------------------------
-LOGO_PATH = Path(os.getenv("LOGO_PATH", "logo.jpg"))
 
 ROLE_OPTIONS = {
     "Invitado": ROLE_INVITADO,
@@ -221,16 +220,6 @@ def safe_json_loads(value: Any) -> Optional[Any]:
         return None
 
 
-def render_logo() -> None:
-    if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), use_container_width=True)
-    else:
-        st.warning(
-            "No se encontró el logo corporativo en la ruta indicada. "
-            "Se continúa con una interfaz estándar para no interrumpir la demo."
-        )
-
-
 def render_topbar() -> str:
     """Renderiza una cabecera horizontal compacta y siempre visible."""
     st.markdown(
@@ -334,11 +323,7 @@ def render_topbar() -> str:
                 [0.42, 1.58],
                 vertical_alignment="center",
             )
-            with logo_column:
-                if LOGO_PATH.exists():
-                    st.image(str(LOGO_PATH), width=38)
-                else:
-                    st.markdown("🤖")
+
             with name_column:
                 st.markdown(
                     '<p class="agent-brand-name">Agente Corporativo IA</p>',

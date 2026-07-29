@@ -27,8 +27,8 @@ def init_knowledge_chromadb() -> bool:
         count = vector_store._collection.count()
 
         logger.info("Base vectorial de conocimiento inicializada.")
-        logger.info("PDF: %s", ", ".join(stats["sources"]))
-        logger.info("Paginas con texto: %s", stats["pages"])
+        logger.info("Fuentes: %s", ", ".join(stats["sources"]))
+        logger.info("Documentos con texto: %s", stats["documents"])
         logger.info("Chunks cargados: %s", count)
         logger.info("Directorio: %s", stats["persist_directory"])
         logger.info("Coleccion: %s", stats["collection_name"])

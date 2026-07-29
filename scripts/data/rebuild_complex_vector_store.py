@@ -28,7 +28,7 @@ def recrear_manuales_complejos_chroma() -> bool:
             COMPLEX_MANUALS_PATH,
         )
         from rag.documents import get_chunked_documents, load_complex_documents
-        from rag.vector_store import get_embeddings
+        from rag.vector_store import get_embeddings, normalized_euclidean_relevance
 
         # Se valida el contenido antes de eliminar la colección existente.
         documents = load_complex_documents()
@@ -48,6 +48,7 @@ def recrear_manuales_complejos_chroma() -> bool:
             collection_name=CHROMA_COLLECTION_NAME,
             embedding_function=embeddings,
             persist_directory=CHROMA_PERSIST_DIR,
+            relevance_score_fn=normalized_euclidean_relevance,
         )
         vector_store.add_documents(
             documents=chunks,

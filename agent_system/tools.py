@@ -8,7 +8,7 @@ from langchain_core.tools import tool
 try:
     from rag.pipeline import retrieve_context
 except Exception:  # pragma: no cover
-    def retrieve_context(query: str, top_k: int = 3) -> str:
+    def retrieve_context(query: str, top_k: int = 2) -> str:
         return (
             "[FALLBACK RAG] No se pudo importar rag.pipeline.retrieve_context. "
             f"Consulta recibida: {query!r} | top_k={top_k}"
@@ -17,7 +17,7 @@ except Exception:  # pragma: no cover
 try:
     from rag.knowledge_pipeline import retrieve_knowledge_context
 except Exception:  # pragma: no cover
-    def retrieve_knowledge_context(query: str, top_k: int = 3) -> str:
+    def retrieve_knowledge_context(query: str, top_k: int = 2) -> str:
         return (
             "[FALLBACK KNOWLEDGE] No se pudo importar "
             "rag.knowledge_pipeline.retrieve_knowledge_context. "
@@ -64,13 +64,13 @@ def truncar_resultado(resultado: Dict[str, Any], max_items: int = 3) -> Dict[str
 # ✅ TOOL: RAG
 # ──────────────────────────────────────────────────────────────
 @tool("rag_retrieve_context")
-def rag_retrieve_context(query: str, top_k: int = 3) -> str:
+def rag_retrieve_context(query: str, top_k: int = 2) -> str:
     """Recupera contexto relevante desde la base documental RAG."""
     return retrieve_context(query=query, top_k=top_k)
 
 
 @tool("knowledge_retrieve_context")
-def knowledge_retrieve_context(query: str, top_k: int = 3) -> str:
+def knowledge_retrieve_context(query: str, top_k: int = 2) -> str:
     """Consulta manuales y PDF de la base de conocimiento no parametrizado."""
     return retrieve_knowledge_context(query=query, top_k=top_k)
 

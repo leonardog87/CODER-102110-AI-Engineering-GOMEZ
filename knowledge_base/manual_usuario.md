@@ -1,6 +1,6 @@
-# Manual de Usuario: Registro Civil Digital
+# Manual de Usuario: Portal de Servicios Digitales
 
-**Versión 1.0** - Ministerio de Justicia y Derechos Humanos
+**Versión 1.1**
 
 ---
 
@@ -8,10 +8,9 @@
 
 Este portal está diseñado para:
 
-- **Ciudadanos mayores de 18 años** que necesiten realizar trámites personales (actas de nacimiento, matrimonio, defunción).
+- **Personas mayores de 18 años** que necesiten utilizar servicios digitales.
 - **Apoderados legales** de menores o personas con discapacidad (deberán adjuntar el documento que acredite la representación).
-- **Funcionarios públicos autorizados** que consulten registros oficiales.
-- **Extranjeros con residencia legal** en el país que requieran certificados de estado civil.
+- **Personal autorizado** que gestione solicitudes del portal.
 
 > ⚠️ **No está habilitado** para menores de edad ni para personas sin documento de identidad vigente.
 

@@ -18,6 +18,11 @@ GENERIC_RESPONSES = {
     "he procesado tu consulta.",
     "no se pudo recuperar una respuesta textual del grafo, pero la interacción fue procesada.",
 }
+PROVISIONAL_RESPONSE_MARKERS = (
+    "por favor, espera mientras",
+    "necesito consultar los manuales",
+    "necesito consultar las políticas",
+)
 
 
 def _last_ai_content(state: AgentState) -> str:
@@ -74,7 +79,10 @@ def evaluar_respuesta(state: AgentState) -> dict:
     content = _last_ai_content(state)
 
     retry_reason = ""
-    if content.lower() in GENERIC_RESPONSES:
+    normalized_content = content.lower()
+    if normalized_content in GENERIC_RESPONSES or any(
+        marker in normalized_content for marker in PROVISIONAL_RESPONSE_MARKERS
+    ):
         retry_reason = "La respuesta está vacía o es demasiado genérica."
     elif _employee_query_without_tool(state):
         retry_reason = (

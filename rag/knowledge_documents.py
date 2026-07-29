@@ -1,4 +1,4 @@
-"""Carga y segmentación de los PDF almacenados en knowledge_base."""
+"""Carga y segmentación de las fuentes editables de knowledge_base."""
 
 from __future__ import annotations
 
@@ -10,11 +10,13 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from rag.config import CHUNK_OVERLAP, CHUNK_SIZE, KNOWLEDGE_BASE_PATH
+from rag.config import KNOWLEDGE_BASE_PATH, KNOWLEDGE_CHUNK_OVERLAP, KNOWLEDGE_CHUNK_SIZE
+
+SUPPORTED_EXTENSIONS = {".md", ".txt", ".pdf"}
 
 
-def _pdf_files() -> List[Path]:
-    """Devuelve los PDF de la base de conocimiento en orden estable."""
+def _source_files() -> List[Path]:
+    """Devuelve las fuentes de texto canónicas en orden estable."""
     if not KNOWLEDGE_BASE_PATH.exists():
         raise FileNotFoundError(
             f"No existe la carpeta de conocimiento: {KNOWLEDGE_BASE_PATH}"
@@ -22,54 +24,48 @@ def _pdf_files() -> List[Path]:
     return sorted(
         path
         for path in KNOWLEDGE_BASE_PATH.rglob("*")
-        if path.is_file() and path.suffix.lower() == ".pdf"
+        if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
     )
 
 
-def _read_pdf(path: Path) -> List[Document]:
-    try:
-        from pypdf import PdfReader
-    except ImportError as exc:
-        raise RuntimeError(
-            "Se necesita la dependencia 'pypdf' para procesar knowledge_base."
-        ) from exc
-
-    reader = PdfReader(str(path))
+def _read_text(path: Path) -> List[Document]:
+    text = path.read_text(encoding="utf-8-sig").strip()
+    if not text:
+        return []
     relative_path = path.relative_to(KNOWLEDGE_BASE_PATH).as_posix()
-    documents: List[Document] = []
-
-    for page_number, page in enumerate(reader.pages, start=1):
-        text = (page.extract_text() or "").strip()
-        if not text:
-            continue
-        documents.append(
-            Document(
-                page_content=text,
-                metadata={
-                    "source": relative_path,
-                    "source_title": path.stem,
-                    "page": page_number,
-                    "document_type": "pdf",
-                },
-            )
+    return [
+        Document(
+            page_content=text,
+            metadata={
+                "source": relative_path,
+                "source_title": path.stem,
+                "page": 1,
+                "document_type": path.suffix.lower().lstrip("."),
+            },
         )
-
-    return documents
+    ]
 
 
 @lru_cache(maxsize=1)
 def load_knowledge_documents() -> List[Document]:
-    """Extrae el texto de todos los PDF disponibles."""
-    return [document for path in _pdf_files() for document in _read_pdf(path)]
+    """Carga las fuentes editables que alimentan el índice simple."""
+    documents = [
+        document for path in _source_files() for document in _read_text(path)
+    ]
+    if not documents:
+        raise ValueError(
+            f"No hay fuentes {sorted(SUPPORTED_EXTENSIONS)} en {KNOWLEDGE_BASE_PATH}."
+        )
+    return documents
 
 
 @lru_cache(maxsize=1)
 def get_knowledge_chunks() -> List[Document]:
     """Segmenta las páginas y asigna identificadores reproducibles."""
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
-        separators=["\n\n", "\n", ". ", " ", ""],
+        chunk_size=KNOWLEDGE_CHUNK_SIZE,
+        chunk_overlap=KNOWLEDGE_CHUNK_OVERLAP,
+        separators=["\n## ", "\n### ", "\n\n", "\n", ". ", " ", ""],
     )
     chunks: List[Document] = []
 

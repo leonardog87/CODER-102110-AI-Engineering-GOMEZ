@@ -6,8 +6,8 @@ La API publica se mantiene estable:
 
 from __future__ import annotations
 
-import json
 import sqlite3
+import unicodedata
 from typing import Any, Dict
 
 from data_access.config import (
@@ -61,6 +61,35 @@ def _run_role_query(
     )
 
 
+def _normalize_filter_term(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value).strip().lower())
+    return "".join(char for char in text if not unicodedata.combining(char))
+
+
+def _normalize_employee_filters(filtros: Dict[str, Any]) -> Dict[str, Any]:
+    """Traduce categorías usuales del usuario a valores reales del catálogo."""
+    normalized = dict(filtros)
+    for key, value in list(normalized.items()):
+        term = _normalize_filter_term(value)
+        if key.lower() == "puesto" and term in {
+            "desarrollador",
+            "desarrolladora",
+            "desarrolladores",
+            "desarrolladoras",
+            "developer",
+            "developers",
+        }:
+            normalized[key] = "Developer"
+        elif key.lower() == "area" and term in {
+            "desarrollador",
+            "desarrolladora",
+            "desarrolladores",
+            "desarrolladoras",
+        }:
+            normalized[key] = "Desarrollo"
+    return normalized
+
+
 def mcp_execute_query(
     tabla: str,
     filtros: dict,
@@ -85,7 +114,7 @@ def mcp_execute_query(
                 data=[],
             )
 
-        filtros = filtros or {}
+        filtros = _normalize_employee_filters(filtros or {})
         role = str(agente_rol).strip()
         safe_limit = max(1, min(int(limit), 100))
 
@@ -144,21 +173,3 @@ def mcp_execute_query(
             message=f"Error inesperado: {str(exc)}",
             data=[],
         )
-
-
-if __name__ == "__main__":
-    demo_empleado = mcp_execute_query(
-        tabla="empleados",
-        filtros={"Area": "Infraestructura"},
-        agente_rol="Empleado",
-    )
-    print("\n=== Empleado (sin salarios) ===")
-    print(json.dumps(demo_empleado, ensure_ascii=False, indent=2))
-
-    demo_administrador = mcp_execute_query(
-        tabla="empleados",
-        filtros={"Area": "Infraestructura"},
-        agente_rol="Administrador",
-    )
-    print("\n=== Administrador (acceso completo) ===")
-    print(json.dumps(demo_administrador, ensure_ascii=False, indent=2))

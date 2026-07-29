@@ -86,7 +86,7 @@ MCP también fija su rol al arrancar y solo publica las herramientas permitidas.
 La sanitización del rol Empleado se realiza en la capa de datos, no únicamente
 en el prompt.
 
-La selección manual de rol incluida en la interfaz es una demostración. En un
+La selección manual de rol incluida en la interfaz simplifica el uso local. En un
 entorno real, el rol debe derivarse de una identidad autenticada y de
 autorizaciones emitidas por el proveedor de identidad.
 
@@ -99,8 +99,11 @@ Existen dos pipelines RAG independientes:
 | Manuales complejos | `manuales_complejos/` | `manuales_complejos_chroma_db/` |
 | Conocimiento general | `knowledge_base/` | `manuales_simples_chroma_db/` |
 
-Los documentos se dividen en fragmentos de 850 caracteres con solapamiento de
-150. Los embeddings usan por defecto
+Los manuales complejos se dividen en fragmentos de 800 caracteres con
+solapamiento de 120; el conocimiento general usa fragmentos de 600 con
+solapamiento de 100. Cada índice recupera hasta seis candidatos, aplica su
+propio umbral de relevancia y entrega los dos mejores tras el reranking. Los
+embeddings usan por defecto
 `sentence-transformers/all-MiniLM-L6-v2`. La búsqueda recupera más candidatos
 que el resultado final y `rag/ranking.py` los reordena según cobertura textual
 y metadatos. El contexto entregado al agente conserva fuente, documento,
@@ -131,7 +134,7 @@ El orden de selección del modelo es:
 2. Hugging Face Endpoint mediante `HF_MODEL_ID` o `OPENAI_MODEL`;
 3. modelo determinista offline si el proveedor o sus dependencias fallan.
 
-El fallback permite demostraciones y pruebas sin conectividad, pero no sustituye
+El fallback permite pruebas sin conectividad, pero no sustituye
 la calidad de un modelo productivo. Las invocaciones usan baja temperatura,
 timeout y reintentos acotados.
 
@@ -235,7 +238,7 @@ aplicación y el certificado TLS deben existir previamente.
 
 ## Limitaciones conocidas
 
-- La UI de demostración no implementa autenticación empresarial.
+- La UI local no implementa autenticación empresarial.
 - SQLite y Chroma locales obligan a ejecutar una sola réplica.
 - El fallback offline prioriza continuidad funcional, no calidad semántica.
 - Los endpoints LLM, LangSmith y MCP remoto dependen de conectividad saliente.
