@@ -5,12 +5,16 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from dotenv import load_dotenv
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("init_knowledge_chroma")
+logger = logging.getLogger("initialize_knowledge_vector_store")
 
 
 def init_knowledge_chromadb() -> bool:

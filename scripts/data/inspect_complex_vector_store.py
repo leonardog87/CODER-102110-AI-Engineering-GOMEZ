@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""
-Script para ver el contenido completo de ChromaDB
-"""
+"""Inspecciona el contenido de la colección Chroma de manuales complejos."""
 
 import os
 import json
 import numpy as np
-from pathlib import Path
 import chromadb
-from chromadb.utils import embedding_functions
 from dotenv import load_dotenv
 
 load_dotenv()

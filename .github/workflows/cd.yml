@@ -36,8 +36,8 @@ jobs:
       - name: Verify release
         run: |
           python -m compileall -q .
-          python test_persistencia.py
-          python test_mcp_protocol.py
+          python tests/test_persistence.py
+          python tests/test_mcp_protocol.py
 
   publish:
     name: Publish production image
@@ -138,11 +138,11 @@ jobs:
         if: ${{ env.KUBE_CONFIG_B64 != '' && env.K8S_HOST != '' }}
         shell: bash
         run: |
-          kubectl get secret ciudad-analitica-secrets -n ciudad-analitica
-          sed -i "s/ciudad-analitica.example.com/${K8S_HOST}/g" \
+          kubectl get secret agente-corporativo-ia-secrets -n agente-corporativo-ia
+          sed -i "s/agente-corporativo-ia.example.com/${K8S_HOST}/g" \
             k8s/overlays/production/ingress.yaml
           cd k8s/overlays/production
-          kubectl kustomize edit set image "ciudad-analitica=${IMAGE}"
+          kubectl kustomize edit set image "agente-corporativo-ia=${IMAGE}"
           kubectl apply -k .
-          kubectl rollout status deployment/ciudad-analitica \
-            -n ciudad-analitica --timeout=10m
+          kubectl rollout status deployment/agente-corporativo-ia \
+            -n agente-corporativo-ia --timeout=10m

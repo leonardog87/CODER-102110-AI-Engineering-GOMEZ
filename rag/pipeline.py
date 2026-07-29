@@ -1,9 +1,9 @@
 """API pública del pipeline RAG del Agente Corporativo IA.
 
-El modulo se mantiene como fachada para no romper imports existentes:
+El módulo se mantiene como fachada para no romper imports existentes:
 - agent_system.tools importa retrieve_context
-- init_chroma.py importa get_vector_store y get_corpus_stats
-- test_persistencia.py valida retrieve_context y get_vector_store
+- scripts/data/initialize_complex_vector_store.py importa las funciones de carga
+- tests/test_persistence.py valida recuperación y persistencia
 """
 
 from __future__ import annotations

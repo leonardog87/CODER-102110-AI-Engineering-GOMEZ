@@ -4,16 +4,18 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from uuid import uuid4
 
 
-WORKSPACE = Path(__file__).resolve().parent
-TEST_DB = WORKSPACE / "data" / f"test_persistencia_{uuid4().hex}.sqlite3"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+TEST_DB = PROJECT_ROOT / "data" / f"test_persistence_{uuid4().hex}.sqlite3"
 
 # Debe configurarse antes de importar data_access.config/database.
 os.environ["AGENTE_CORPORATIVO_DB"] = str(TEST_DB)
-os.environ["EMPLEADOS_CSV"] = str(WORKSPACE / "raw_data" / "empleados.csv")
+os.environ["EMPLEADOS_CSV"] = str(PROJECT_ROOT / "raw_data" / "empleados.csv")
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["LANGSMITH_TRACING"] = "false"
 
@@ -31,7 +33,7 @@ def assert_chroma_persistence() -> None:
         ("manuales_complejos_chroma_db", "manuales_complejos"),
     )
     for directory, collection_name in expected:
-        path = WORKSPACE / directory
+        path = PROJECT_ROOT / directory
         assert path.is_dir(), f"No existe el directorio Chroma: {path}"
         client = chromadb.PersistentClient(path=str(path))
         collection = client.get_collection(collection_name)

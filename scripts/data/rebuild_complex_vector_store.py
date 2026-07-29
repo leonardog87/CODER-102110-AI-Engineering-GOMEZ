@@ -5,6 +5,10 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 import chromadb
 from dotenv import load_dotenv
@@ -12,7 +16,7 @@ from langchain_chroma import Chroma
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("recrear_manuales_complejos_chroma")
+logger = logging.getLogger("rebuild_complex_vector_store")
 
 
 def recrear_manuales_complejos_chroma() -> bool:

@@ -8,8 +8,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$namespace = "ciudad-analitica"
-$deployment = "ciudad-analitica"
+$namespace = "agente-corporativo-ia"
+$deployment = "agente-corporativo-ia"
 
 if (-not (Get-Command kubectl -ErrorAction SilentlyContinue)) {
     throw "kubectl no está instalado o no se encuentra en PATH."
@@ -26,7 +26,7 @@ if ($Image -notmatch "^[^/]+/[^/]+/.+(@sha256:[a-f0-9]{64}|:[A-Za-z0-9._-]+)$") 
 $workspace = (Resolve-Path -LiteralPath ".").Path
 $sourceOverlay = (Resolve-Path -LiteralPath $Overlay).Path
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
-    "ciudad-analitica-k8s-" + [guid]::NewGuid().ToString("N")
+    "agente-corporativo-ia-k8s-" + [guid]::NewGuid().ToString("N")
 )
 
 try {
@@ -44,18 +44,21 @@ try {
 
     Push-Location $tempOverlay
     try {
-        kubectl kustomize edit set image "ciudad-analitica=$Image"
+        kubectl kustomize edit set image "agente-corporativo-ia=$Image"
     }
     finally {
         Pop-Location
     }
 
     kubectl apply -f (Join-Path $workspace "k8s/base/namespace.yaml")
-    kubectl -n $namespace create secret generic ciudad-analitica-secrets `
+    kubectl -n $namespace create secret generic agente-corporativo-ia-secrets `
         "--from-env-file=$SecretsFile" `
         --dry-run=client -o yaml |
         kubectl apply -f -
     kubectl apply -k $tempOverlay
+    # Los cambios de Secret no modifican el PodTemplate del Deployment.
+    # Reiniciar garantiza que los Pods lean las credenciales actualizadas.
+    kubectl rollout restart "deployment/$deployment" -n $namespace
     kubectl rollout status "deployment/$deployment" `
         -n $namespace --timeout=10m
 }

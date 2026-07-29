@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
-"""
-Script para inicializar ChromaDB con los documentos RAG.
-"""
+"""Inicializa la colección Chroma de manuales complejos."""
 
 import os
 import sys
 import logging
 from pathlib import Path
 
-# Agregar el directorio raíz al path
-sys.path.insert(0, str(Path(__file__).parent))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from dotenv import load_dotenv
 load_dotenv()
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("init_chroma")
+logger = logging.getLogger("initialize_complex_vector_store")
 
 def init_chromadb():
     """Inicializa ChromaDB con los documentos RAG."""

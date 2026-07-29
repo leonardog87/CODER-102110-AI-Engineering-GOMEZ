@@ -9,7 +9,7 @@ import chromadb
 from dotenv import load_dotenv
 
 
-def ver_chroma_manuales_simples() -> None:
+def inspect_knowledge_vector_store() -> None:
     """Lista colecciones, metadatos y texto de los manuales simples."""
     load_dotenv()
     persist_directory = os.getenv(
@@ -55,4 +55,4 @@ def ver_chroma_manuales_simples() -> None:
 
 
 if __name__ == "__main__":
-    ver_chroma_manuales_simples()
+    inspect_knowledge_vector_store()

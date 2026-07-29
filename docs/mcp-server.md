@@ -61,7 +61,7 @@ El parámetro `limit` admite de 1 a 100 resultados.
 ## Verificación
 
 ```powershell
-python test_mcp_protocol.py
+python tests/test_mcp_protocol.py
 ```
 
 La prueba usa el cliente del SDK oficial, negocia el protocolo, descubre las

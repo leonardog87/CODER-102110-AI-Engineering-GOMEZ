@@ -1,8 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ciudad-analitica
-  namespace: ciudad-analitica
+  name: agente-corporativo-ia
+  namespace: agente-corporativo-ia
 spec:
   template:
     spec:

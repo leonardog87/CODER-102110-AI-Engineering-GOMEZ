@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-    image: ciudad-analitica:local
+    image: agente-corporativo-ia:local
     restart: unless-stopped
     env_file:
       - .env

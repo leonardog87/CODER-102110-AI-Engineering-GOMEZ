@@ -4,6 +4,6 @@ resources:
   - ../../base
   - ingress.yaml
 images:
-  - name: ciudad-analitica
-    newName: ghcr.io/replace-with-owner/ciudad-analitica
+  - name: agente-corporativo-ia
+    newName: ghcr.io/replace-with-owner/agente-corporativo-ia
     newTag: latest

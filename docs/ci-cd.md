@@ -71,4 +71,5 @@ los secretos y montar almacenamiento persistente para:
 El contenedor expone el puerto `8501` y define un health check contra
 `/_stcore/health`.
 
-Los manifiestos Kubernetes y su operación se documentan en `KUBERNETES.md`.
+Los manifiestos Kubernetes y su operación se documentan en
+`docs/kubernetes.md`.

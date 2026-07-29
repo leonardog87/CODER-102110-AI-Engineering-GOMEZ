@@ -11,20 +11,21 @@ from pathlib import Path
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 
 async def check_role(role: str) -> None:
     parameters = StdioServerParameters(
         command=sys.executable,
         args=[
-            str(ROOT / "mcp_server.py"),
+            str(PROJECT_ROOT / "mcp_server.py"),
             "--role",
             role,
             "--transport",
             "stdio",
         ],
-        cwd=ROOT,
+        cwd=PROJECT_ROOT,
         env={
             **os.environ,
             "LANGCHAIN_TRACING_V2": "false",

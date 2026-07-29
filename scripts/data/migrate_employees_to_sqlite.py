@@ -2,12 +2,17 @@
 Migra empleados.csv de raw_data a la base SQLite del proyecto.
 
 Uso:
-    python migrar_csv_a_sqlite.py
+    python scripts/data/migrate_employees_to_sqlite.py
 """
 
 from __future__ import annotations
 
 import json
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from data_access.service import (
     SQLITE_DB_PATH,

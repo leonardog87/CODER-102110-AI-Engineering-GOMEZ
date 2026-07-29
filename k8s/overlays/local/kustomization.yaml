@@ -5,6 +5,6 @@ resources:
 patches:
   - path: deployment-patch.yaml
 images:
-  - name: ciudad-analitica
-    newName: ciudad-analitica
+  - name: agente-corporativo-ia
+    newName: agente-corporativo-ia
     newTag: local

@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ciudad-analitica
-  namespace: ciudad-analitica
+  name: agente-corporativo-ia
+  namespace: agente-corporativo-ia
   labels:
-    app.kubernetes.io/name: ciudad-analitica
+    app.kubernetes.io/name: agente-corporativo-ia
     app.kubernetes.io/component: application
 spec:
   replicas: 1
@@ -12,14 +12,14 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app.kubernetes.io/name: ciudad-analitica
+      app.kubernetes.io/name: agente-corporativo-ia
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: ciudad-analitica
+        app.kubernetes.io/name: agente-corporativo-ia
         app.kubernetes.io/component: application
     spec:
-      serviceAccountName: ciudad-analitica
+      serviceAccountName: agente-corporativo-ia
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -31,7 +31,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: app
-          image: ciudad-analitica:latest
+          image: agente-corporativo-ia:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -42,9 +42,9 @@ spec:
               value: /tmp
           envFrom:
             - configMapRef:
-                name: ciudad-analitica-config
+                name: agente-corporativo-ia-config
             - secretRef:
-                name: ciudad-analitica-secrets
+                name: agente-corporativo-ia-secrets
           resources:
             requests:
               cpu: 500m

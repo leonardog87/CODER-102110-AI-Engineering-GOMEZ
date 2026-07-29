@@ -2,18 +2,22 @@
 """Muestra el contenido de la base SQLite generada desde los archivos CSV.
 
 Ejemplos:
-    python ver_base_datos_sqlite.py
-    python ver_base_datos_sqlite.py --tabla empleados
-    python ver_base_datos_sqlite.py --tabla empleados --limite 20
-    python ver_base_datos_sqlite.py --sin-limite
+    python scripts/data/inspect_sqlite_database.py
+    python scripts/data/inspect_sqlite_database.py --tabla empleados
+    python scripts/data/inspect_sqlite_database.py --tabla empleados --limite 20
+    python scripts/data/inspect_sqlite_database.py --sin-limite
 """
 
 from __future__ import annotations
 
 import argparse
 import sqlite3
+import sys
 from pathlib import Path
 from typing import Any, Sequence
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from data_access.config import SQLITE_DB_PATH
 
@@ -112,7 +116,8 @@ def main() -> int:
     if not db_path.is_file():
         raise SystemExit(
             f"No se encontró la base de datos: {db_path}\n"
-            "Creala ejecutando: python migrar_csv_a_sqlite.py"
+            "Creala ejecutando: "
+            "python scripts/data/migrate_employees_to_sqlite.py"
         )
 
     # mode=ro garantiza que este visor no pueda modificar la base.
