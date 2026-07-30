@@ -21,7 +21,12 @@ os.environ["LANGSMITH_TRACING"] = "false"
 
 from data_access.database import close_connection  # noqa: E402
 from data_access.query_history import load_query_history, save_query_record  # noqa: E402
-from data_access.service import mcp_execute_query  # noqa: E402
+from data_access.service import (  # noqa: E402
+    mcp_count_employees,
+    mcp_employee_distribution,
+    mcp_execute_query,
+    mcp_salary_statistics,
+)
 from agent_system.runtime import (  # noqa: E402
     _direct_tool_call_for_structured_query,
     _format_tool_result_for_user,
@@ -30,7 +35,11 @@ from agent_system.runtime import (  # noqa: E402
 )
 from agent_system.tools import (  # noqa: E402
     consultar_empleados_mcp_administrador,
+    contar_empleados_mcp_administrador,
+    distribucion_empleados_mcp_administrador,
+    estadisticas_salariales_mcp_administrador,
     rag_retrieve_context,
+    verificar_respuesta_con_fuentes,
 )
 from langchain_core.messages import HumanMessage, ToolMessage  # noqa: E402
 
@@ -85,12 +94,45 @@ def assert_role_chat_persistence() -> None:
     )
     assert developer_area_result["data"]["total"] == 4, developer_area_result
 
+    assert mcp_count_employees(
+        {"Puesto": "desarrolladores"},
+        "Empleado",
+    )["data"]["total"] == 4
+    distribution = mcp_employee_distribution("area", {}, "Empleado")
+    assert distribution["data"]["total"] == 20
+    assert all("Sueldo_ARS" not in group for group in distribution["data"]["groups"])
+    salary_stats = mcp_salary_statistics(
+        {"Area": "Infraestructura"},
+        "Administrador",
+    )
+    assert salary_stats["data"]["mediana"] == 4100000
+    assert mcp_salary_statistics({}, "Empleado")["status_code"] == 403
+
     direct_call = _direct_tool_call_for_structured_query(
         [HumanMessage(content="dime cuantos empleados son desarrolladores")],
         [consultar_empleados_mcp_administrador],
     )
     assert direct_call is not None
     assert direct_call["args"] == {"puesto": "Developer"}
+
+    direct_count_call = _direct_tool_call_for_structured_query(
+        [HumanMessage(content="dime cuantos empleados son desarrolladores")],
+        [contar_empleados_mcp_administrador],
+    )
+    assert direct_count_call["name"] == "contar_empleados_mcp_administrador"
+    assert direct_count_call["args"] == {"puesto": "Developer"}
+
+    direct_distribution_call = _direct_tool_call_for_structured_query(
+        [HumanMessage(content="distribución porcentual por área")],
+        [distribucion_empleados_mcp_administrador],
+    )
+    assert direct_distribution_call["args"] == {"group_by": "area"}
+
+    direct_salary_call = _direct_tool_call_for_structured_query(
+        [HumanMessage(content="mediana salarial de Infraestructura")],
+        [estadisticas_salariales_mcp_administrador],
+    )
+    assert direct_salary_call["args"] == {"area": "Infraestructura"}
 
     formatted = _format_tool_result_for_user(
         [
@@ -170,6 +212,16 @@ def assert_role_chat_persistence() -> None:
     )
     assert "autorización explícita" in policy_response
     assert "mínimo necesario" in policy_response
+
+    evidence = json.loads(
+        verificar_respuesta_con_fuentes.invoke(
+            {
+                "respuesta": "El acceso requiere autorización explícita.",
+                "contexto": "La política exige autorización explícita para el acceso.",
+            }
+        )
+    )
+    assert evidence["supported"] is True
 
     expected_queries = {
         "Invitado": "¿Cómo recupero mi contraseña?",

@@ -57,6 +57,11 @@ a manuales y a datos de empleados, pero SIN información salarial.
 3. "consultar_empleados_mcp_empleado": Datos de empleados SIN salarios.
    - Campos disponibles: DNI, Apellido, Nombre, Área, Puesto.
    - Campos PROHIBIDOS: Sueldo_ARS y cualquier estadística salarial.
+4. "contar_empleados_mcp_empleado": conteos exactos con filtros.
+5. "distribucion_empleados_mcp_empleado": cantidades y porcentajes por área/puesto.
+6. "consultar_politica_aplicable": controles de una política interna.
+7. "combinar_politica_con_area_empleado": política más datos no salariales.
+8. "verificar_respuesta_con_fuentes": comprueba respaldo textual.
 
 📋 **REGLAS OBLIGATORIAS:**
 
@@ -105,6 +110,13 @@ COMPLETO a todas las fuentes de información del sistema.
    - Estadísticas: totales, promedios, sumas.
 2. "knowledge_retrieve_context": Manuales simples y guías de usuario.
 3. "rag_retrieve_context": Manuales complejos, políticas y documentación técnica.
+4. "contar_empleados_mcp_administrador": conteos exactos con filtros.
+5. "distribucion_empleados_mcp_administrador": distribución por área/puesto.
+6. "estadisticas_salariales_mcp_administrador": promedio, mediana, mínimo,
+   máximo y suma; nunca calcules estas métricas desde `sample`.
+7. "consultar_politica_aplicable": recupera controles internos aplicables.
+8. "combinar_politica_con_area_administrador": combina política y datos de área.
+9. "verificar_respuesta_con_fuentes": verifica el respaldo de una respuesta.
 
 📋 **REGLAS OBLIGATORIAS:**
 

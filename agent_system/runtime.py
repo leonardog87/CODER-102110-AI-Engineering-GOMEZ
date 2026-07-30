@@ -219,6 +219,33 @@ def _format_tool_result_for_user(
         total = data.get("total", 0)
         sample = data.get("sample", [])
         stats = data.get("stats", {})
+
+        if "groups" in data:
+            groups = data.get("groups", [])
+            lines = [
+                f"Distribución de **{total} empleados** por {data.get('group_by', 'categoría')}:"
+            ]
+            lines.extend(
+                f"- {group.get('categoria')}: {group.get('cantidad')} "
+                f"({group.get('porcentaje')}%)"
+                for group in groups
+                if isinstance(group, dict)
+            )
+            return "\n".join(lines)
+
+        if "mediana" in data:
+            if not total:
+                return "No se encontraron empleados para calcular estadísticas salariales."
+            return "\n".join(
+                [
+                    f"Estadísticas salariales sobre **{total} empleados**:",
+                    f"- Promedio: ${data.get('promedio', 0):,.2f}",
+                    f"- Mediana: ${data.get('mediana', 0):,.2f}",
+                    f"- Mínimo: ${data.get('minimo', 0):,.2f}",
+                    f"- Máximo: ${data.get('maximo', 0):,.2f}",
+                    f"- Suma: ${data.get('suma', 0):,.2f}",
+                ]
+            )
         
         lines = []
         
@@ -414,6 +441,14 @@ def _direct_tool_call_for_structured_query(
     user_text = _normalize_text(_last_human_text(messages))
     tool_names = {tool_obj.name for tool_obj in tools}
 
+    filters: Dict[str, Any] = {}
+    if "infraestructura" in user_text:
+        filters["area"] = "Infraestructura"
+    elif "desarrollo" in user_text and "desarrollador" not in user_text:
+        filters["area"] = "Desarrollo"
+    if "desarrollador" in user_text:
+        filters["puesto"] = "Developer"
+
     if _is_policy_infrastructure_query(user_text):
         employee_tool = next(
             (
@@ -447,38 +482,76 @@ def _direct_tool_call_for_structured_query(
             "id": "direct_rag_policy",
         }
 
+    salary_terms = ("salario", "sueldo", "mediana salarial", "estadistica salarial")
+    if any(term in user_text for term in salary_terms):
+        if "estadisticas_salariales_mcp_administrador" in tool_names:
+            return {
+                "name": "estadisticas_salariales_mcp_administrador",
+                "args": filters,
+                "id": "direct_salary_statistics",
+            }
+
+    if any(term in user_text for term in ("distribucion", "distribui", "porcentaje")):
+        distribution_tool = next(
+            (
+                name
+                for name in (
+                    "distribucion_empleados_mcp_administrador",
+                    "distribucion_empleados_mcp_empleado",
+                )
+                if name in tool_names
+            ),
+            None,
+        )
+        if distribution_tool:
+            group_by = "puesto" if "puesto" in user_text else "area"
+            return {
+                "name": distribution_tool,
+                "args": {"group_by": group_by, **filters},
+                "id": "direct_employee_distribution",
+            }
+
     asks_for_list = any(
         token in user_text
         for token in ("listado", "lista", "listar", "todos", "todas", "mostrar", "dame")
     )
 
     if "empleado" in user_text:
+        preferred_tools = (
+            (
+                "contar_empleados_mcp_administrador",
+                "contar_empleados_mcp_empleado",
+            )
+            if _is_count_query(user_text)
+            else (
+                "consultar_empleados_mcp_administrador",
+                "consultar_empleados_mcp_empleado",
+            )
+        )
         employee_tool = next(
             (
                 name
-                for name in (
-                    "consultar_empleados_mcp_administrador",
-                    "consultar_empleados_mcp_empleado",
-                )
+                for name in preferred_tools
                 if name in tool_names
             ),
             None,
         )
+        if employee_tool is None and _is_count_query(user_text):
+            employee_tool = next(
+                (
+                    name
+                    for name in (
+                        "consultar_empleados_mcp_administrador",
+                        "consultar_empleados_mcp_empleado",
+                    )
+                    if name in tool_names
+                ),
+                None,
+            )
         if employee_tool:
-            args: Dict[str, Any] = {}
-            if any(
-                term in user_text
-                for term in (
-                    "desarrollador",
-                    "desarrolladora",
-                    "desarrolladores",
-                    "desarrolladoras",
-                )
-            ):
-                args["puesto"] = "Developer"
             return {
                 "name": employee_tool,
-                "args": args,
+                "args": filters,
                 "id": "direct_empleados_query",
             }
         return {
@@ -637,6 +710,18 @@ def invoke_specialist_agent(
                 content=_format_database_policy_result(tool_messages)
             )
             logger.info("Consulta normativa: respuesta determinista desde RAG")
+        elif any(
+            message.tool_call_id
+            in {"direct_employee_distribution", "direct_salary_statistics"}
+            for message in tool_messages
+        ):
+            final_ai = AIMessage(
+                content=_format_tool_result_for_user(
+                    tool_messages,
+                    user_text=_last_human_text(messages),
+                )
+            )
+            logger.info("Analítica estructurada: respuesta determinista desde MCP")
         elif _is_count_query(_last_human_text(messages)):
             final_ai = AIMessage(
                 content=_format_tool_result_for_user(

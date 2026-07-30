@@ -17,7 +17,14 @@ from data_access.config import (
     logger,
 )
 from data_access.database import get_connection, migrate_empleados_to_sqlite
-from data_access.queries import get_aggregated_data, list_tables, preview_table
+from data_access.queries import (
+    get_aggregated_data,
+    get_employee_count,
+    get_employee_distribution,
+    get_salary_statistics,
+    list_tables,
+    preview_table,
+)
 from data_access.security import response, sanitize_employee_output
 
 __all__ = [
@@ -28,7 +35,10 @@ __all__ = [
     "list_tables",
     "mcp_execute_query",
     "migrate_empleados_to_sqlite",
+    "mcp_count_employees",
+    "mcp_employee_distribution",
     "preview_table",
+    "mcp_salary_statistics",
 ]
 
 
@@ -173,3 +183,53 @@ def mcp_execute_query(
             message=f"Error inesperado: {str(exc)}",
             data=[],
         )
+
+
+def mcp_count_employees(filtros: dict, agente_rol: str) -> dict:
+    """Cuenta empleados usando todos los registros, no una muestra."""
+    if str(agente_rol).strip() not in {"Empleado", "Administrador"}:
+        return response(403, "forbidden", [], "Rol no autorizado.")
+    try:
+        safe_filters = _normalize_employee_filters(filtros or {})
+        total = get_employee_count(get_connection(), safe_filters)
+        return response(
+            status_code=200,
+            status="ok",
+            message=f"Conteo completado: {total} empleado(s).",
+            data={"total": total, "filters": safe_filters},
+        )
+    except (sqlite3.Error, ValueError) as exc:
+        return response(400, "bad_request", [], str(exc))
+
+
+def mcp_salary_statistics(filtros: dict, agente_rol: str) -> dict:
+    """Calcula estadísticas salariales; disponible sólo para Administrador."""
+    if str(agente_rol).strip() != "Administrador":
+        return response(
+            status_code=403,
+            status="forbidden",
+            message="El rol no tiene autorización para estadísticas salariales.",
+            data=[],
+        )
+    try:
+        safe_filters = _normalize_employee_filters(filtros or {})
+        data = get_salary_statistics(get_connection(), safe_filters)
+        return response(200, "ok", data, "Estadísticas salariales calculadas.")
+    except (sqlite3.Error, ValueError) as exc:
+        return response(400, "bad_request", [], str(exc))
+
+
+def mcp_employee_distribution(
+    group_by: str,
+    filtros: dict,
+    agente_rol: str,
+) -> dict:
+    """Distribuye empleados por área o puesto sin exponer salarios."""
+    if str(agente_rol).strip() not in {"Empleado", "Administrador"}:
+        return response(403, "forbidden", [], "Rol no autorizado.")
+    try:
+        safe_filters = _normalize_employee_filters(filtros or {})
+        data = get_employee_distribution(get_connection(), group_by, safe_filters)
+        return response(200, "ok", data, "Distribución calculada.")
+    except (sqlite3.Error, ValueError) as exc:
+        return response(400, "bad_request", [], str(exc))

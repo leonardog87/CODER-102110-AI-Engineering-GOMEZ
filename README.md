@@ -131,6 +131,10 @@ python scripts/data/initialize_complex_vector_store.py
 python scripts/data/initialize_knowledge_vector_store.py
 python scripts/data/rebuild_knowledge_vector_store.py
 python scripts/data/inspect_sqlite_database.py
+python scripts/data/inspect_employee_analytics.py count --puesto desarrolladores
+python scripts/data/inspect_employee_analytics.py distribution --group-by area
+python scripts/data/inspect_employee_analytics.py salary `
+  --role Administrador --area Infraestructura
 ```
 
 Las utilidades restantes están documentadas por su nombre en `scripts/data/`.

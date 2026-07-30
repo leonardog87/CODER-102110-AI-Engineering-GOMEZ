@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import json
+import re
 from typing import Any, Dict, List
 from langchain_core.tools import tool
 
@@ -105,6 +106,169 @@ def _consultar_empleados(
             resultado,
             max_items=LIMIT,
         )
+    )
+
+
+def _employee_filters(
+    *,
+    area: str | None = None,
+    puesto: str | None = None,
+) -> Dict[str, Any]:
+    return compact_filters(area=area, puesto=puesto)
+
+
+def _call_employee_analytics(
+    *,
+    role: str,
+    tool_name: str,
+    arguments: Dict[str, Any],
+) -> str:
+    return safe_json(
+        call_mcp_tool(
+            role=role,
+            tool_name=tool_name,
+            arguments=arguments,
+        )
+    )
+
+
+@tool("contar_empleados_mcp_empleado")
+def contar_empleados_mcp_empleado(
+    area: str | None = None,
+    puesto: str | None = None,
+) -> str:
+    """Cuenta empleados por área o puesto sin acceder a salarios."""
+    return _call_employee_analytics(
+        role="Empleado",
+        tool_name="contar_empleados",
+        arguments=_employee_filters(area=area, puesto=puesto),
+    )
+
+
+@tool("contar_empleados_mcp_administrador")
+def contar_empleados_mcp_administrador(
+    area: str | None = None,
+    puesto: str | None = None,
+) -> str:
+    """Cuenta empleados por área o puesto sobre el conjunto completo."""
+    return _call_employee_analytics(
+        role="Administrador",
+        tool_name="contar_empleados",
+        arguments=_employee_filters(area=area, puesto=puesto),
+    )
+
+
+@tool("distribucion_empleados_mcp_empleado")
+def distribucion_empleados_mcp_empleado(
+    group_by: str = "area",
+    area: str | None = None,
+    puesto: str | None = None,
+) -> str:
+    """Agrupa empleados por área o puesto sin información salarial."""
+    return _call_employee_analytics(
+        role="Empleado",
+        tool_name="distribucion_empleados",
+        arguments={
+            "group_by": group_by,
+            **_employee_filters(area=area, puesto=puesto),
+        },
+    )
+
+
+@tool("distribucion_empleados_mcp_administrador")
+def distribucion_empleados_mcp_administrador(
+    group_by: str = "area",
+    area: str | None = None,
+    puesto: str | None = None,
+) -> str:
+    """Agrupa empleados por área o puesto con cantidades y porcentajes."""
+    return _call_employee_analytics(
+        role="Administrador",
+        tool_name="distribucion_empleados",
+        arguments={
+            "group_by": group_by,
+            **_employee_filters(area=area, puesto=puesto),
+        },
+    )
+
+
+@tool("estadisticas_salariales_mcp_administrador")
+def estadisticas_salariales_mcp_administrador(
+    area: str | None = None,
+    puesto: str | None = None,
+) -> str:
+    """Calcula estadísticas salariales exactas; sólo para Administrador."""
+    return _call_employee_analytics(
+        role="Administrador",
+        tool_name="estadisticas_salariales",
+        arguments=_employee_filters(area=area, puesto=puesto),
+    )
+
+
+@tool("consultar_politica_aplicable")
+def consultar_politica_aplicable(accion: str) -> str:
+    """Recupera controles internos aplicables a una acción o escenario."""
+    return retrieve_context(query=accion, top_k=2)
+
+
+def _combine_policy_and_area(*, role: str, politica: str, area: str) -> str:
+    policy = retrieve_context(query=politica, top_k=2)
+    employees = call_mcp_tool(
+        role=role,
+        tool_name="consultar_empleados",
+        arguments={"area": area, "limit": 10},
+    )
+    return safe_json(
+        {
+            "policy_context": policy,
+            "employee_data": employees,
+            "area": area,
+        }
+    )
+
+
+@tool("combinar_politica_con_area_empleado")
+def combinar_politica_con_area_empleado(politica: str, area: str) -> str:
+    """Combina una política con datos no salariales de un área."""
+    return _combine_policy_and_area(role="Empleado", politica=politica, area=area)
+
+
+@tool("combinar_politica_con_area_administrador")
+def combinar_politica_con_area_administrador(politica: str, area: str) -> str:
+    """Combina una política con los datos autorizados de un área."""
+    return _combine_policy_and_area(
+        role="Administrador",
+        politica=politica,
+        area=area,
+    )
+
+
+@tool("verificar_respuesta_con_fuentes")
+def verificar_respuesta_con_fuentes(respuesta: str, contexto: str) -> str:
+    """Mide cobertura léxica y señala términos sin respaldo documental."""
+    ignored = {
+        "para", "como", "esta", "este", "sobre", "entre", "desde", "hasta",
+        "debe", "deben", "datos", "informacion", "respuesta",
+    }
+    answer_terms = {
+        token
+        for token in re.findall(r"[a-záéíóúñ0-9]+", respuesta.lower())
+        if len(token) > 3 and token not in ignored
+    }
+    context_terms = set(re.findall(r"[a-záéíóúñ0-9]+", contexto.lower()))
+    supported = answer_terms & context_terms
+    unsupported = sorted(answer_terms - context_terms)
+    coverage = (
+        round(len(supported) / len(answer_terms), 3)
+        if answer_terms
+        else 1.0
+    )
+    return safe_json(
+        {
+            "supported": coverage >= 0.6,
+            "coverage": coverage,
+            "unsupported_terms": unsupported[:20],
+        }
     )
 
 

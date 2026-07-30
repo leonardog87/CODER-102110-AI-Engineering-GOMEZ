@@ -10,11 +10,17 @@ from langchain_core.messages import BaseMessage
 from agent_system.prompts import SYSTEM_PROMPT_INVITADO
 from agent_system.runtime import invoke_specialist_agent
 from agent_system.state import AgentState
-from agent_system.tools import knowledge_retrieve_context
+from agent_system.tools import (
+    knowledge_retrieve_context,
+    verificar_respuesta_con_fuentes,
+)
 
 logger = logging.getLogger("agente_corporativo.agent_system.invitado_agent")
 
-INVITADO_TOOLS = [knowledge_retrieve_context]
+INVITADO_TOOLS = [
+    knowledge_retrieve_context,
+    verificar_respuesta_con_fuentes,
+]
 
 
 def agente_invitado(state: AgentState) -> Dict[str, List[BaseMessage]]:

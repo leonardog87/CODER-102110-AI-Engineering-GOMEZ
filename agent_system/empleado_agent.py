@@ -11,9 +11,14 @@ from agent_system.prompts import SYSTEM_PROMPT_EMPLEADO
 from agent_system.runtime import invoke_specialist_agent
 from agent_system.state import AgentState
 from agent_system.tools import (
+    combinar_politica_con_area_empleado,
     consultar_empleados_mcp_empleado,
+    consultar_politica_aplicable,
+    contar_empleados_mcp_empleado,
+    distribucion_empleados_mcp_empleado,
     knowledge_retrieve_context,
     rag_retrieve_context,
+    verificar_respuesta_con_fuentes,
 )
 
 logger = logging.getLogger("agente_corporativo.agent_system.empleado_agent")
@@ -22,6 +27,11 @@ EMPLEADO_TOOLS = [
     rag_retrieve_context,
     knowledge_retrieve_context,
     consultar_empleados_mcp_empleado,
+    contar_empleados_mcp_empleado,
+    distribucion_empleados_mcp_empleado,
+    consultar_politica_aplicable,
+    combinar_politica_con_area_empleado,
+    verificar_respuesta_con_fuentes,
 ]
 
 

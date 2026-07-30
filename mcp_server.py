@@ -9,7 +9,12 @@ from typing import Any, Dict, Literal
 
 from mcp.server.fastmcp import FastMCP
 
-from data_access.service import mcp_execute_query
+from data_access.service import (
+    mcp_count_employees,
+    mcp_employee_distribution,
+    mcp_execute_query,
+    mcp_salary_statistics,
+)
 
 McpRole = Literal["Invitado", "Empleado", "Administrador"]
 ALLOWED_MCP_ROLES = {"Invitado", "Empleado", "Administrador"}
@@ -88,6 +93,43 @@ def create_mcp_server(
     if authorized_role in {"Empleado", "Administrador"}:
 
         @server.tool(
+            name="contar_empleados",
+            description="Cuenta empleados con filtros opcionales sobre todos los registros.",
+            structured_output=True,
+        )
+        def contar_empleados(
+            area: str | None = None,
+            puesto: str | None = None,
+        ) -> Dict[str, Any]:
+            filtros = {
+                key: value
+                for key, value in {"Area": area, "Puesto": puesto}.items()
+                if value is not None and str(value).strip()
+            }
+            return mcp_count_employees(filtros, authorized_role)
+
+        @server.tool(
+            name="distribucion_empleados",
+            description="Agrupa empleados por área o puesto con cantidades y porcentajes.",
+            structured_output=True,
+        )
+        def distribucion_empleados(
+            group_by: Literal["area", "puesto"] = "area",
+            area: str | None = None,
+            puesto: str | None = None,
+        ) -> Dict[str, Any]:
+            filtros = {
+                key: value
+                for key, value in {"Area": area, "Puesto": puesto}.items()
+                if value is not None and str(value).strip()
+            }
+            return mcp_employee_distribution(
+                group_by,
+                filtros,
+                authorized_role,
+            )
+
+        @server.tool(
             name="consultar_empleados",
             description=(
                 "Consulta empleados por campos autorizados. "
@@ -120,6 +162,27 @@ def create_mcp_server(
                 agente_rol=authorized_role,
                 limit=limit,
             )
+
+        if authorized_role == "Administrador":
+
+            @server.tool(
+                name="estadisticas_salariales",
+                description=(
+                    "Calcula cantidad, promedio, mediana, mínimo, máximo y suma "
+                    "salarial con filtros opcionales."
+                ),
+                structured_output=True,
+            )
+            def estadisticas_salariales(
+                area: str | None = None,
+                puesto: str | None = None,
+            ) -> Dict[str, Any]:
+                filtros = {
+                    key: value
+                    for key, value in {"Area": area, "Puesto": puesto}.items()
+                    if value is not None and str(value).strip()
+                }
+                return mcp_salary_statistics(filtros, authorized_role)
 
     return server
 

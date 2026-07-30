@@ -126,6 +126,14 @@ SQLite contiene la tabla permitida `empleados`. La capa `data_access/` valida
 consultas, aplica filtros, limita resultados, elimina campos no autorizados y
 mantiene el historial de conversaciones aislado por rol.
 
+Las operaciones deterministas se publican como tools especializadas:
+
+- conteo total filtrado, sin depender del tamaño de una muestra;
+- distribución por área o puesto con porcentajes;
+- estadísticas salariales completas, exclusivas del Administrador;
+- recuperación de políticas aplicables y combinación con datos de un área;
+- verificación léxica del respaldo de una respuesta contra sus fuentes.
+
 ## Proveedores de modelos y tolerancia a fallos
 
 El orden de selección del modelo es:
