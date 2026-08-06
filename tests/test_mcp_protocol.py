@@ -40,6 +40,19 @@ async def check_role(role: str) -> None:
             }
             assert "consultar_permisos" in tools
 
+            permissions_result = await session.call_tool("consultar_permisos", {})
+            assert not permissions_result.isError
+            permissions = permissions_result.structuredContent["result"]
+            assert permissions["role"] == role
+
+            resource_result = await session.read_resource("schema://empleados")
+            schema = json.loads(resource_result.contents[0].text)
+            assert schema["role"] == role
+            assert schema["accessible"] is (role != "Invitado")
+            assert ("Sueldo_ARS" in schema["fields"]) is (
+                role == "Administrador"
+            )
+
             if role == "Invitado":
                 assert "consultar_empleados" not in tools
                 assert "contar_empleados" not in tools
@@ -95,6 +108,7 @@ async def main() -> None:
     for role in ("Invitado", "Empleado", "Administrador"):
         await check_role(role)
     print("[OK] Negociación y descubrimiento MCP")
+    print("[OK] Permisos y esquema MCP coherentes con cada rol")
     print("[OK] Invitado sin herramienta SQLite")
     print("[OK] Empleado sin información salarial")
     print("[OK] Administrador con acceso completo")

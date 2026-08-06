@@ -141,6 +141,9 @@ Las utilidades restantes están documentadas por su nombre en `scripts/data/`.
 
 ## Pruebas
 
+La suite es local y no requiere credenciales de proveedores. La guía de alcance
+y resolución de problemas está en [docs/testing.md](docs/testing.md).
+
 ```powershell
 python -m compileall -q .
 python tests/test_persistence.py

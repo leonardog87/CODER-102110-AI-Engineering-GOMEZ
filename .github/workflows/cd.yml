@@ -38,6 +38,7 @@ jobs:
           python -m compileall -q .
           python tests/test_persistence.py
           python tests/test_mcp_protocol.py
+          python tests/test_rag_retrieval.py
 
   publish:
     name: Publish production image

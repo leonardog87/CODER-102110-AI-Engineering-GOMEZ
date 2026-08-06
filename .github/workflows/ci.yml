@@ -50,6 +50,9 @@ jobs:
       - name: Test MCP protocol and authorization
         run: python tests/test_mcp_protocol.py
 
+      - name: Test RAG retrieval relevance
+        run: python tests/test_rag_retrieval.py
+
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 

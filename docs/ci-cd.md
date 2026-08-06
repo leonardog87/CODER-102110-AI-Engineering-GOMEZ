@@ -13,7 +13,9 @@ Registry (`ghcr.io`).
 3. compila todos los módulos Python;
 4. prueba persistencia y aislamiento por roles;
 5. prueba negociación, autorización y herramientas MCP;
-6. construye la imagen de producción sin publicarla.
+6. prueba relevancia, límites y filtrado fuera de dominio de ambos índices RAG;
+7. renderiza los manifiestos de Kubernetes;
+8. construye la imagen de producción sin publicarla.
 
 Conviene proteger la rama principal y exigir los checks `Python checks` y
 `Container build` antes de aceptar un merge.
