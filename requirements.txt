@@ -5,6 +5,7 @@ langchain
 langgraph
 langchain-community
 langchain-huggingface
+sentence-transformers
 langchain-openai
 langsmith
 agentevals>=0.0.9,<0.1
