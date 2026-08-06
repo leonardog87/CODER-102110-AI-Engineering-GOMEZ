@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
-
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
-os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
