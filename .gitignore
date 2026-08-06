@@ -16,3 +16,4 @@ dist/
 build/
 *.egg-info/
 data/test_*.sqlite3
+.env
