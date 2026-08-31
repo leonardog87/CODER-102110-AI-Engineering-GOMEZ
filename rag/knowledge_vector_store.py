@@ -7,12 +7,32 @@ from functools import lru_cache
 from langchain_chroma import Chroma
 
 from rag.config import (
+    EMBEDDING_MODEL_NAME,
     KNOWLEDGE_CHROMA_COLLECTION_NAME,
     KNOWLEDGE_CHROMA_PERSIST_DIR,
     logger,
 )
 from rag.knowledge_documents import get_knowledge_chunks
-from rag.vector_store import get_embeddings, normalized_euclidean_relevance
+
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+except Exception:  # pragma: no cover
+    from langchain_community.embeddings import HuggingFaceEmbeddings  # type: ignore
+
+
+def normalized_euclidean_relevance(distance: float) -> float:
+    """Convierte distancia euclídea normalizada en un score acotado."""
+    score = 1.0 - (float(distance) / (2.0**0.5))
+    return max(0.0, min(1.0, score))
+
+
+@lru_cache(maxsize=1)
+def get_embeddings() -> HuggingFaceEmbeddings:
+    """Crea y cachea el modelo de embeddings de knowledge_base."""
+    return HuggingFaceEmbeddings(
+        model_name=EMBEDDING_MODEL_NAME,
+        encode_kwargs={"normalize_embeddings": True},
+    )
 
 
 @lru_cache(maxsize=1)

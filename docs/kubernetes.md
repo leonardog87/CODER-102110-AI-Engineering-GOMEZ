@@ -11,7 +11,7 @@ escritor. El manifiesto utiliza una réplica, PVC `ReadWriteOnce` y estrategia
 
 - cluster Kubernetes con StorageClass predeterminada;
 - controlador `ingress-nginx`;
-- Secret TLS llamado `agente-corporativo-ia-tls`;
+- Secret TLS llamado `chatbot-tls`;
 - `kubectl`;
 - imagen publicada en GHCR;
 - acceso de red saliente al proveedor LLM y LangSmith.
@@ -19,24 +19,24 @@ escritor. El manifiesto utiliza una réplica, PVC `ReadWriteOnce` y estrategia
 ## Ejecución local con kind
 
 El overlay `k8s/overlays/local` reutiliza la imagen
-`agente-corporativo-ia:local`, desactiva su descarga desde un registro y utiliza la
+`chatbot:local`, desactiva su descarga desde un registro y utiliza la
 StorageClass local del cluster.
 
 ```powershell
-docker build -t agente-corporativo-ia:local .
+docker build -t chatbot:local .
 kind create cluster --config k8s/local/kind-config.yaml
-kind load docker-image agente-corporativo-ia:local `
-  --name agente-corporativo-ia
+kind load docker-image chatbot:local `
+  --name chatbot
 ```
 
-Después de crear `agente-corporativo-ia-secrets` desde las credenciales locales:
+Después de crear `chatbot-secrets` desde las credenciales locales:
 
 ```powershell
 kubectl apply -k k8s/overlays/local
-kubectl rollout status deployment/agente-corporativo-ia `
-  -n agente-corporativo-ia --timeout=10m
-kubectl port-forward service/agente-corporativo-ia 8501:80 `
-  -n agente-corporativo-ia
+kubectl rollout status deployment/chatbot `
+  -n chatbot --timeout=10m
+kubectl port-forward service/chatbot 8501:80 `
+  -n chatbot
 ```
 
 La aplicación queda disponible en `http://localhost:8501`. El port-forward
@@ -47,7 +47,7 @@ debe permanecer en ejecución mientras se utiliza la aplicación.
 `.env` es apropiado únicamente para desarrollo local y Compose. Kubernetes no
 lee ese archivo: la configuración no sensible vive en
 `k8s/base/configmap.yaml` y las credenciales se inyectan desde el Secret
-`agente-corporativo-ia-secrets`.
+`chatbot-secrets`.
 
 Para un cluster local, creá un archivo que no será versionado:
 
@@ -63,7 +63,7 @@ Completá las credenciales y desplegá:
   -SecretsFile k8s/secrets.env
 ```
 
-Antes de producción, reemplazá `agente-corporativo-ia.example.com` en
+Antes de producción, reemplazá `chatbot.example.com` en
 `k8s/overlays/production/ingress.yaml` por el dominio real.
 
 El script:
@@ -91,10 +91,10 @@ rotala y limpiá el historial según la política del repositorio.
 
 ```powershell
 .\scripts\validate-k8s.ps1
-kubectl get pods,pvc,service,ingress -n agente-corporativo-ia
-kubectl logs deployment/agente-corporativo-ia -n agente-corporativo-ia
-kubectl port-forward service/agente-corporativo-ia 8501:80 `
-  -n agente-corporativo-ia
+kubectl get pods,pvc,service,ingress -n chatbot
+kubectl logs deployment/chatbot -n chatbot
+kubectl port-forward service/chatbot 8501:80 `
+  -n chatbot
 ```
 
 La comprobación local queda disponible en `http://localhost:8501`.
@@ -107,7 +107,7 @@ Configurá en el environment de GitHub `production`:
   Base64 y limitado al namespace;
 - `K8S_HOST`: dominio público sin protocolo.
 
-El Secret `agente-corporativo-ia-secrets` y el TLS deben aprovisionarse previamente
+El Secret `chatbot-secrets` y el TLS deben aprovisionarse previamente
 en el cluster. Al publicar una etiqueta `vX.Y.Z`, CD despliega la imagen por
 digest y espera el rollout. Si los secretos de CD no existen, la imagen se
 publica pero el despliegue se omite explícitamente.
@@ -117,8 +117,8 @@ publica pero el despliegue se omite explícitamente.
 Realizá snapshots periódicos de los tres PVC. Para rollback:
 
 ```powershell
-kubectl rollout undo deployment/agente-corporativo-ia `
-  -n agente-corporativo-ia
+kubectl rollout undo deployment/chatbot `
+  -n chatbot
 ```
 
 Con estrategia `Recreate` habrá una interrupción breve durante la actualización.

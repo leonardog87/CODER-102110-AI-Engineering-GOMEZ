@@ -15,32 +15,12 @@ from trajectory_evaluation.trajectory_accuracy import DEFAULT_DATASET
 load_dotenv()
 
 EXAMPLES = [
-    {
-        "question": "¿Qué servicios ofrece el asistente corporativo?",
-        "rol_usuario": "Invitado",
-    },
-    {
-        "question": "¿Puedo consultar la nómina de empleados?",
-        "rol_usuario": "Invitado",
-    },
-    {
-        "question": (
-            "¿Qué indica la normativa sobre el acceso seguro a bases de datos?"
-        ),
-        "rol_usuario": "Empleado",
-    },
-    {
-        "question": "Mostrame los empleados del área de Infraestructura.",
-        "rol_usuario": "Empleado",
-    },
-    {
-        "question": "¿Cuál es el sueldo promedio del área de Desarrollo?",
-        "rol_usuario": "Empleado",
-    },
-    {
-        "question": "Listá los empleados del área de Desarrollo.",
-        "rol_usuario": "Administrador",
-    },
+    {"question": "¿Qué servicios ofrece la empresa?"},
+    {"question": "¿Cuáles son los valores del negocio?"},
+    {"question": "¿Cómo puedo contactar a soporte?"},
+    {"question": "¿Cómo creo una cuenta?"},
+    {"question": "Olvidé mi contraseña, ¿cómo recupero el acceso?"},
+    {"question": "¿Qué procedimiento complejo debo seguir para esta gestión?"},
 ]
 
 
@@ -56,10 +36,10 @@ def ensure_dataset(dataset_name: str) -> tuple[str, int]:
         dataset = client.create_dataset(
             dataset_name,
             description=(
-                "Casos por rol para evaluar corrección, eficiencia y relevancia "
-                "del grafo Agente Corporativo IA."
+                "Casos genéricos para evaluar corrección, eficiencia y relevancia "
+                "del agente único chatBot."
             ),
-            metadata={"project": "agente-corporativo-ia", "version": 1},
+            metadata={"project": "chatBot", "version": 2},
         )
 
     existing_ids = {
@@ -70,8 +50,7 @@ def ensure_dataset(dataset_name: str) -> tuple[str, int]:
     for inputs in EXAMPLES:
         stable_id = uuid5(
             NAMESPACE_URL,
-            f"agente-corporativo-ia/{dataset_name}/"
-            f"{inputs['rol_usuario']}/{inputs['question']}",
+            f"chatBot/{dataset_name}/{inputs['question']}",
         )
         metadata = {"source": "repository-canonical-dataset"}
         if str(stable_id) in existing_ids:

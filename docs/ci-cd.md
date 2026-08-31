@@ -11,9 +11,9 @@ Registry (`ghcr.io`).
 1. instala las dependencias con Python 3.12;
 2. rechaza un archivo `.env` versionado;
 3. compila todos los módulos Python;
-4. prueba persistencia y aislamiento por roles;
-5. prueba negociación, autorización y herramientas MCP;
-6. prueba relevancia, límites y filtrado fuera de dominio de ambos índices RAG;
+4. prueba persistencia del historial y de `knowledge_base`;
+5. prueba el catálogo de herramientas RAG;
+6. prueba relevancia y límites del índice único RAG;
 7. renderiza los manifiestos de Kubernetes;
 8. construye la imagen de producción sin publicarla.
 
@@ -67,8 +67,7 @@ El workflow entrega una imagen inmutable y verificable. El entorno de ejecución
 los secretos y montar almacenamiento persistente para:
 
 - `/app/data`
-- `/app/manuales_complejos_chroma_db`
-- `/app/manuales_simples_chroma_db`
+- `/app/knowledge_base_chroma_db`
 
 El contenedor expone el puerto `8501` y define un health check contra
 `/_stcore/health`.

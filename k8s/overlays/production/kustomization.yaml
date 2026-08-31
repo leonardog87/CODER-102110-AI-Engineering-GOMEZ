@@ -4,6 +4,6 @@ resources:
   - ../../base
   - ingress.yaml
 images:
-  - name: agente-corporativo-ia
-    newName: ghcr.io/replace-with-owner/agente-corporativo-ia
+  - name: chatbot
+    newName: ghcr.io/replace-with-owner/chatbot
     newTag: latest

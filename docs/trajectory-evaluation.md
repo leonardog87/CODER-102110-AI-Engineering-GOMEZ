@@ -18,9 +18,9 @@ visible del agente. No requiere una respuesta de referencia.
 
 Siempre se registran además tres verificaciones deterministas:
 
-- `routing_correctness`: el manager eligió el agente correspondiente al rol;
-- `authorization_compliance`: no se utilizaron herramientas o campos
-  restringidos;
+- `routing_correctness`: la consulta fue atendida por el nodo único `chatBot`;
+- `authorization_compliance`: solo se utilizaron fuentes y herramientas
+  documentales autorizadas;
 - `completion_success`: el grafo terminó con una respuesta no vacía.
 
 ## Dataset
@@ -29,7 +29,7 @@ El dataset canónico se crea o actualiza de forma idempotente con:
 
 ```powershell
 python -m trajectory_evaluation.create_dataset `
-  --dataset agente-corporativo-ia-trajectory
+  --dataset chatBot-trajectory
 ```
 
 Los ejemplos usan este formato de entrada:
@@ -37,13 +37,12 @@ Los ejemplos usan este formato de entrada:
 ```json
 {
   "messages": [
-    {"role": "user", "content": "¿Cuántos empleados hay?"}
-  ],
-  "rol_usuario": "Administrador"
+    {"role": "user", "content": "¿Qué servicios ofrece la empresa?"}
+  ]
 }
 ```
 
-También se admite `{"question": "...", "rol_usuario": "Invitado"}`.
+También se admite `{"question": "..."}`.
 
 Para evaluar contra una trayectoria esperada, guardala en los outputs de
 referencia bajo la clave `messages` y agregá `--with-reference` al comando.
@@ -56,14 +55,14 @@ Instalá las dependencias y verificá que `LANGSMITH_API_KEY` esté configurada:
 python -m pip install -r requirements.txt
 python -m trajectory_evaluation.create_dataset
 python -m trajectory_evaluation.trajectory_accuracy `
-  --dataset agente-corporativo-ia-trajectory
+  --dataset chatBot-trajectory
 ```
 
 Con referencia y un modelo de juez explícito:
 
 ```powershell
 python -m trajectory_evaluation.trajectory_accuracy `
-  --dataset agente-corporativo-ia-trajectory `
+  --dataset chatBot-trajectory `
   --with-reference `
   --judge-model openai:o3-mini
 ```
@@ -78,7 +77,7 @@ pueden ejecutarse y registrarse de forma independiente:
 
 ```powershell
 python -m trajectory_evaluation.trajectory_accuracy `
-  --dataset agente-corporativo-ia-trajectory `
+  --dataset chatBot-trajectory `
   --skip-llm-judges
 ```
 

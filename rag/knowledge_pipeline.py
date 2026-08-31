@@ -15,10 +15,11 @@ from rag.config import (
     KNOWLEDGE_RETRIEVAL_CANDIDATES,
     KNOWLEDGE_RETRIEVAL_TOP_K,
     KNOWLEDGE_RELEVANCE_THRESHOLD,
+    SEMANTIC_SEARCH_ENABLED,
 )
 from rag.knowledge_documents import get_knowledge_chunks, load_knowledge_documents
 from rag.knowledge_vector_store import get_knowledge_vector_store
-from rag.ranking import rerank_documents
+from rag.ranking import has_lexical_overlap, rerank_documents
 
 
 def _expand_common_portal_queries(query: str) -> str:
@@ -37,6 +38,43 @@ def _expand_common_portal_queries(query: str) -> str:
     return query
 
 
+def _intent_matches(query: str, documents: List[Document]) -> List[Document]:
+    """Prioriza coincidencias inequívocas para consultas frecuentes y breves."""
+    normalized = query.lower()
+    stems: tuple[str, ...] = ()
+    intent = ""
+    if any(
+        term in normalized
+        for term in ("registro", "registrar", "registro", "cuenta", "crear usuario")
+    ):
+        intent = "registration"
+        stems = ("registr", "crear cuenta")
+    elif any(term in normalized for term in ("contraseña", "contrasena", "clave")):
+        intent = "password"
+        stems = ("contrase", "clave")
+    elif any(term in normalized for term in ("contacto", "teléfono", "telefono", "soporte")):
+        intent = "contact"
+        stems = ("contacto", "teléfono", "telefono", "soporte")
+    if not stems:
+        return []
+    matches = [
+        document
+        for document in documents
+        if any(stem in document.page_content.lower() for stem in stems)
+    ]
+    def intent_score(document: Document) -> int:
+        text = document.page_content.lower()
+        score = sum(text.count(stem) for stem in stems)
+        if intent == "registration":
+            score += (text.count("paso") * 4) + (text.count("haz clic") * 3)
+        elif intent == "password":
+            score += (text.count("paso") * 3) + (text.count("recuper") * 3)
+        elif intent == "contact":
+            score += text.count("@") * 3
+        return score
+    return sorted(matches, key=intent_score, reverse=True)
+
+
 def retrieve_knowledge_documents(
     query: str,
     top_k: int = KNOWLEDGE_RETRIEVAL_TOP_K,
@@ -47,15 +85,37 @@ def retrieve_knowledge_documents(
         return []
     retrieval_query = _expand_common_portal_queries(clean_query)
     candidate_k = max(KNOWLEDGE_RETRIEVAL_CANDIDATES, top_k)
-    candidates = get_knowledge_vector_store().similarity_search_with_relevance_scores(
-        retrieval_query,
-        k=candidate_k,
-    )
+    chunks = get_knowledge_chunks()
+    intent_matches = _intent_matches(clean_query, chunks)
+    if intent_matches:
+        return intent_matches[:top_k]
+    lexical = rerank_documents(retrieval_query, chunks)
+    lexical_matches = [
+        item for item in lexical if has_lexical_overlap(retrieval_query, item[0])
+    ]
+    if lexical_matches:
+        return [document for document, _score in lexical_matches[:top_k]]
+    if not SEMANTIC_SEARCH_ENABLED:
+        return []
+    try:
+        candidates = get_knowledge_vector_store().similarity_search_with_relevance_scores(
+            retrieval_query,
+            k=candidate_k,
+        )
+    except Exception:
+        candidates = []
     relevant = [
         (document, float(score))
         for document, score in candidates
         if float(score) >= KNOWLEDGE_RELEVANCE_THRESHOLD
     ]
+    if not relevant:
+        # Respaldo léxico sobre la fuente actual. Evita falsos negativos por
+        # umbrales de embeddings en preguntas breves como "¿cómo me registro?".
+        lexical = rerank_documents(retrieval_query, get_knowledge_chunks())
+        relevant = [
+            item for item in lexical if has_lexical_overlap(retrieval_query, item[0])
+        ][:candidate_k]
     ranked = rerank_documents(
         retrieval_query,
         [document for document, _score in relevant],
@@ -90,7 +150,7 @@ def retrieve_knowledge_context(
 
 
 def get_knowledge_stats() -> Dict[str, Any]:
-    """Informa el contenido y configuración del segundo índice."""
+    """Informa el contenido y configuración del índice único."""
     documents = load_knowledge_documents()
     chunks = get_knowledge_chunks()
     return {

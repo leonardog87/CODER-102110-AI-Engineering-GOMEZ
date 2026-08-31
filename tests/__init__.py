@@ -1,1 +1,1 @@
-"""Integration and persistence tests for Agente Corporativo IA."""
+"""Pruebas de integración y persistencia de chatBot."""

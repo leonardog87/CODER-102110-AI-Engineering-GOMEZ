@@ -1,4 +1,4 @@
-"""Evaluación local de precisión básica para ambos índices RAG."""
+"""Evaluación local de precisión de knowledge_base."""
 
 from __future__ import annotations
 
@@ -9,67 +9,40 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from rag.knowledge_pipeline import retrieve_knowledge_documents
-from rag.pipeline import retrieve_documents
-from agent_system.manager_agent import agente_encargado
-
-
-def _sources(documents) -> set[str]:
-    return {str(document.metadata.get("source", "")) for document in documents}
-
-
-def test_deterministic_role_sources() -> None:
-    invited = agente_encargado({"rol_usuario": "Invitado"})
-    employee = agente_encargado({"rol_usuario": "Empleado"})
-
-    invited_text = invited["motivo_designacion"].lower()
-    employee_text = employee["motivo_designacion"].lower()
-
-    assert "manual_usuario" in invited_text
-    assert "manual_usuario" in employee_text
-    assert "manual_empleado" in employee_text
-    assert "manual_empleado" not in invited_text
+from agent_system.tools import knowledge_retrieve_context
 
 
 def main() -> int:
     password_docs = retrieve_knowledge_documents("¿Cómo recupero mi contraseña?")
     support_docs = retrieve_knowledge_documents("¿Cuál es el teléfono de soporte?")
-    audience_docs = retrieve_knowledge_documents("a quien esta dirgida esta web?")
     registration_docs = retrieve_knowledge_documents("como me registro?")
-    capabilities_docs = retrieve_knowledge_documents("que puedo hacer aqui?")
-    assert password_docs and len(password_docs) <= 2
-    assert support_docs and len(support_docs) <= 2
-    assert audience_docs and len(audience_docs) <= 2
-    assert registration_docs and len(registration_docs) <= 2
-    assert capabilities_docs and len(capabilities_docs) <= 2
-    assert "empleados del ministerio de capital humano" in " ".join(
-        document.page_content.lower() for document in audience_docs
-    )
-    assert "registrarme" in " ".join(
+    assert password_docs and len(password_docs) <= 3
+    assert support_docs and len(support_docs) <= 3
+    assert registration_docs and len(registration_docs) <= 3
+    assert "registr" in " ".join(
         document.page_content.lower() for document in registration_docs
     )
-    assert "qué puedo hacer aquí" in " ".join(
-        document.page_content.lower() for document in capabilities_docs
+
+    registration_context = knowledge_retrieve_context.invoke(
+        {"query": "¿Cómo me registro?", "top_k": 2}
     )
-
-    assert not retrieve_knowledge_documents(
-        "¿Cómo obtengo un acta de nacimiento del Registro Civil?"
+    user_context = knowledge_retrieve_context.invoke(
+        {"query": "¿Cómo creo un usuario?", "top_k": 2}
     )
-    assert not retrieve_knowledge_documents("receta de cocina italiana")
-
-    database_docs = retrieve_documents(
-        "política de acceso seguro a bases de datos"
+    services_context = knowledge_retrieve_context.invoke(
+        {"query": "Buen día, ¿qué servicios prestan?", "top_k": 2}
     )
-    network_docs = retrieve_documents("diagnóstico de problemas de red y DNS")
-    assert "normativa_acceso_bases_datos.md" in _sources(database_docs)
-    assert "guia_problemas_red.md" in _sources(network_docs)
+    assert "registr" in registration_context.lower()
+    assert "paso" in registration_context.lower()
+    assert "crear cuenta" in user_context.lower() or "registr" in user_context.lower()
+    assert "no se encontraron fragmentos" not in registration_context.lower()
+    assert "manual_servicios.md" in services_context
+    assert "servicio" in services_context.lower()
 
-    test_deterministic_role_sources()
-
-    print("[OK] Recuperación relevante limitada a dos fragmentos")
-    print("[OK] Público destinatario del portal recuperado correctamente")
-    print("[OK] Consultas fuera de dominio filtradas")
-    print("[OK] Fuentes complejas correctas para normativa y red")
-    print("[OK] Contexto determinista por rol configurado")
+    print("[OK] Recuperación relevante limitada a tres fragmentos")
+    print("[OK] Registro y soporte recuperados correctamente")
+    print("[OK] Servicios recuperados desde knowledge_base")
+    print("[OK] Fuente única knowledge_base disponible")
     return 0
 
 

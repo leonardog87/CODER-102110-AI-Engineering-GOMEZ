@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import os
 import unicodedata
 from functools import lru_cache, wraps
@@ -14,7 +15,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 
 load_dotenv()
 
-logger = logging.getLogger("agente_corporativo.agent_system.models")
+logger = logging.getLogger("chatBot.agent_system.models")
 
 _token = os.getenv("HUGGINGFACEHUB_API_TOKEN") or os.getenv("HF_TOKEN")
 if _token:
@@ -154,7 +155,6 @@ def build_chat_model():
 
     model_id = (
         os.getenv("HF_MODEL_ID")
-        or os.getenv("AGENTE_CORPORATIVO_HF_MODEL_ID")
         or openai_model
     )
     token = os.getenv("HUGGINGFACEHUB_API_TOKEN") or os.getenv("HF_TOKEN")
@@ -223,41 +223,17 @@ class OfflineFallbackChatModel:
         normalized_user_text = self._normalize(user_text)
         tool_names = self._available_tool_names()
 
-        employee_tool = next(
-            (
-                name
-                for name in (
-                    "consultar_empleados_mcp_administrador",
-                    "consultar_empleados_mcp_empleado",
-                )
-                if name in tool_names
-            ),
-            None,
-        )
-        if "empleado" in normalized_user_text and employee_tool:
+        retrieval_tool = "knowledge_retrieve_context"
+        if retrieval_tool in tool_names and user_text:
             return AIMessage(
                 content=(
-                    f'{{"name": "{employee_tool}", '
-                    '"arguments": {"dni": null, "nombre": null, "apellido": null, '
-                    '"area": null, "puesto": null}}'
-                )
-            )
-
-        if "cliente" in normalized_user_text:
-            return AIMessage(
-                content="La base SQLite disponible contiene únicamente empleados."
-            )
-
-        if "empleado" in normalized_user_text:
-            return AIMessage(
-                content=(
-                    "No tenes permisos para consultar empleados con el rol actual. "
-                    "Este rol no tiene acceso a la base de empleados."
+                    f'{{"name": "{retrieval_tool}", '
+                    f'"arguments": {{"query": {json.dumps(user_text, ensure_ascii=False)}, "top_k": 2}}}}'
                 )
             )
 
         content = (
-            "Respuesta de respaldo: el grafo esta operativo y el agente fue designado, "
+            "Respuesta de respaldo: chatBot está operativo, "
             "pero el proveedor LLM configurado no esta disponible ahora."
         )
         if user_text:

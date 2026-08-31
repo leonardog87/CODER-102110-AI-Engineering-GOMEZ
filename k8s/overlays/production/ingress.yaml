@@ -1,8 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: agente-corporativo-ia
-  namespace: agente-corporativo-ia
+  name: chatbot
+  namespace: chatbot
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
@@ -11,16 +11,16 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - agente-corporativo-ia.example.com
-      secretName: agente-corporativo-ia-tls
+        - chatbot.example.com
+      secretName: chatbot-tls
   rules:
-    - host: agente-corporativo-ia.example.com
+    - host: chatbot.example.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: agente-corporativo-ia
+                name: chatbot
                 port:
                   name: http

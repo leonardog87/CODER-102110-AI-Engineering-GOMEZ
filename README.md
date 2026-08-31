@@ -1,11 +1,11 @@
-# Agente Corporativo IA
+# chatBot
 
-Sistema multiagente para consultar documentación y datos corporativos con
-recuperación aumentada (RAG), autorización por rol y trazabilidad de
-trayectorias.
+Proyecto genérico de chatbot con un único agente. Responde consultas sobre un
+negocio o empresa, sus servicios, valores y contacto, además de guiar procesos
+como registro, login y recuperación de acceso.
 
-El proyecto integra Streamlit, LangChain, LangGraph, Chroma, Model Context
-Protocol (MCP), LangSmith, Docker y Kubernetes.
+El proyecto integra Streamlit, LangChain, LangGraph, Chroma, LangSmith, Docker
+y Kubernetes.
 
 ## Arquitectura
 
@@ -13,24 +13,9 @@ Protocol (MCP), LangSmith, Docker y Kubernetes.
 flowchart TD
     U[Usuario] --> UI[Streamlit]
     UI --> S[Estado LangGraph]
-    S --> M[Manager determinista]
-    M --> I[Agente Invitado]
-    M --> E[Agente Empleado]
-    M --> A[Agente Administrador]
-    I --> KG[RAG de conocimiento general]
-    E --> KG
-    E --> CR[RAG de manuales complejos]
-    A --> KG
-    A --> CR
-    E --> ME[MCP Empleado]
-    A --> MA[MCP Administrador]
-    ME --> DB[(SQLite)]
-    MA --> DB
-    I --> EV[Evaluador]
-    E --> EV
-    A --> EV
-    EV -->|retry acotado| M
-    EV -->|end| UI
+    S --> B[chatBot]
+    B --> KG[knowledge_base]
+    B --> UI
     S -. trazas .-> LS[LangSmith]
     KG --> C1[(Chroma)]
     CR --> C2[(Chroma)]
@@ -39,17 +24,14 @@ flowchart TD
 La descripción completa está en
 [docs/architecture.md](docs/architecture.md).
 
-## Capacidades por rol
+## Fuentes de conocimiento
 
-| Rol | Conocimiento general | Manuales complejos | Datos de empleados |
-|---|---:|---:|---|
-| Invitado | Sí | No | No |
-| Empleado | Sí | Sí | Sí, sin salarios |
-| Administrador | Sí | Sí | Sí, incluido salario y estadísticas |
+| Fuente | Uso |
+|---|---|
+| `knowledge_base/` | Toda la información, servicios, contacto, guías, políticas y procedimientos |
 
-La selección manual de rol simplifica el uso local. Antes de desplegar en un
-entorno empresarial debe reemplazarse por identidad verificada, como se explica
-en [docs/architecture.md](docs/architecture.md).
+`knowledge_base` es la única fuente local y no parametrizada. El orquestador
+decide qué documentos incorporar a ella.
 
 ## Requisitos
 
@@ -81,7 +63,7 @@ También puede utilizarse `HUGGINGFACEHUB_API_TOKEN` y `HF_MODEL_ID`. El `.env`
 real está excluido de Git y no debe contenerse en la imagen.
 
 La búsqueda web externa está desactivada por defecto, por lo que la recuperación
-usa exclusivamente los manuales vectorizados y la base SQLite:
+usa exclusivamente `knowledge_base`:
 
 ```env
 WEB_SEARCH_ENABLED=false
@@ -117,12 +99,12 @@ uvicorn api:app --reload --port 8000
 ```
 
 La API queda disponible en `http://localhost:8000` y su contrato interactivo
-en `http://localhost:8000/docs`. `POST /api/chat` recibe `message`, `role` y,
-opcionalmente, `conversation_history`; `GET /api/history/{role}` recupera el
-historial persistido. Para un frontend remoto, configurá
+en `http://localhost:8000/docs`. `POST /api/chat` recibe `message` y,
+opcionalmente, `conversation_history`; `GET /api/history` recupera el historial
+persistido. La respuesta declara `sources: ["knowledge_base"]`. Para un
+frontend remoto, configurá
 `API_CORS_ORIGINS` separado por `;` en `.env` (por ejemplo,
-`https://mi-frontend.example.com`). En producción, el rol debe obtenerse de la
-identidad autenticada del backend, no confiarse al JSON del navegador.
+`https://mi-frontend.example.com`).
 
 Con Docker Compose:
 
@@ -135,43 +117,25 @@ Compose publica Streamlit en `http://localhost:8501` y la API en
 
 ## Ejemplos de uso
 
-### Invitado
+### Consultas generales
 
-- “¿Qué servicios ofrece el asistente corporativo?”
-- “Resumí las recomendaciones generales del manual de usuario.”
-- “¿Puedo consultar la nómina de empleados?”
+- “¿Qué servicios ofrece la empresa?”
+- “¿Cuáles son sus valores y horarios?”
+- “¿Cómo contacto a soporte?”
+- “¿Cómo me registro o recupero mi contraseña?”
 
-La última pregunta debe ser rechazada porque el rol Invitado no accede a datos
-de empleados.
+### Procedimientos
 
-### Empleado
-
-- “¿Qué indica la normativa sobre el acceso seguro a bases de datos?”
-- “Mostrame los empleados del área de Infraestructura.”
-- “¿Cuál es el sueldo promedio del área de Desarrollo?”
-
-La consulta salarial debe ser rechazada y ningún resultado MCP debe incluir
-`Sueldo_ARS`.
-
-### Administrador
-
-- “Listá los empleados del área de Desarrollo.”
-- “¿Cuál es el sueldo promedio de los empleados consultados?”
-- “Combiná la política de acceso a bases de datos con la información del área
-  de Infraestructura.”
+- “¿Qué política se aplica a esta gestión?”
+- “Resumí el procedimiento documentado para este trámite.”
+- “¿Qué requisitos indica el manual técnico?”
 
 ## Inicialización e inspección de datos
 
 ```powershell
-python scripts/data/migrate_employees_to_sqlite.py
-python scripts/data/initialize_complex_vector_store.py
 python scripts/data/initialize_knowledge_vector_store.py
 python scripts/data/rebuild_knowledge_vector_store.py
 python scripts/data/inspect_sqlite_database.py
-python scripts/data/inspect_employee_analytics.py count --puesto desarrolladores
-python scripts/data/inspect_employee_analytics.py distribution --group-by area
-python scripts/data/inspect_employee_analytics.py salary `
-  --role Administrador --area Infraestructura
 ```
 
 Las utilidades restantes están documentadas por su nombre en `scripts/data/`.
@@ -184,7 +148,6 @@ y resolución de problemas está en [docs/testing.md](docs/testing.md).
 ```powershell
 python -m compileall -q .
 python tests/test_persistence.py
-python tests/test_mcp_protocol.py
 python tests/test_rag_retrieval.py
 .\scripts\validate-k8s.ps1
 ```
@@ -192,10 +155,10 @@ python tests/test_rag_retrieval.py
 ## Kubernetes local
 
 ```powershell
-docker build -t agente-corporativo-ia:local .
+docker build -t chatbot:local .
 kind create cluster --config k8s/local/kind-config.yaml
-kind load docker-image agente-corporativo-ia:local `
-  --name agente-corporativo-ia
+kind load docker-image chatbot:local `
+  --name chatbot
 Copy-Item k8s/secrets.env.example k8s/secrets.env
 ```
 
@@ -203,16 +166,16 @@ Después de completar `k8s/secrets.env`:
 
 ```powershell
 kubectl apply -f k8s/base/namespace.yaml
-kubectl -n agente-corporativo-ia create secret generic `
-  agente-corporativo-ia-secrets `
+kubectl -n chatbot create secret generic `
+  chatbot-secrets `
   --from-env-file=k8s/secrets.env `
   --dry-run=client -o yaml |
   kubectl apply -f -
 kubectl apply -k k8s/overlays/local
-kubectl rollout status deployment/agente-corporativo-ia `
-  -n agente-corporativo-ia --timeout=10m
-kubectl port-forward service/agente-corporativo-ia 8501:80 `
-  -n agente-corporativo-ia
+kubectl rollout status deployment/chatbot `
+  -n chatbot --timeout=10m
+kubectl port-forward service/chatbot 8501:80 `
+  -n chatbot
 ```
 
 La guía completa y la evidencia de ejecución están en
@@ -222,12 +185,12 @@ La guía completa y la evidencia de ejecución están en
 ## Evaluación con LangSmith
 
 Configurá `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` y un dataset con entradas
-`question` y `rol_usuario`. Luego ejecutá:
+`question`. Luego ejecutá:
 
 ```powershell
 python -m trajectory_evaluation.create_dataset
 python -m trajectory_evaluation.trajectory_accuracy `
-  --dataset agente-corporativo-ia-trajectory
+  --dataset chatBot-trajectory
 ```
 
 Los resultados y su procedimiento reproducible se encuentran en
@@ -239,7 +202,6 @@ El índice completo está en [docs/README.md](docs/README.md).
 
 ## Estado del proyecto
 
-La arquitectura es desplegable. Para un entorno empresarial se deben sustituir
-la selección manual de rol por identidad
-verificada, gestionar secretos externamente, migrar SQLite a PostgreSQL,
-utilizar almacenamiento vectorial compartido e instalar monitoreo y backups.
+La arquitectura es desplegable. Para producción se deben gestionar secretos
+externamente, evaluar PostgreSQL para el historial, utilizar almacenamiento
+vectorial compartido e instalar monitoreo y backups.

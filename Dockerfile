@@ -20,12 +20,10 @@ COPY --chown=app:app . .
 
 RUN mkdir -p \
       /app/data \
-      /app/manuales_complejos_chroma_db \
-      /app/manuales_simples_chroma_db && \
+      /app/knowledge_base_chroma_db && \
     chown -R app:app \
       /app/data \
-      /app/manuales_complejos_chroma_db \
-      /app/manuales_simples_chroma_db
+      /app/knowledge_base_chroma_db
 
 USER app
 

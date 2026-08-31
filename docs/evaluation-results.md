@@ -6,10 +6,10 @@ Fecha: **2026-07-29**.
 
 Dataset LangSmith:
 
-- nombre: `agente-corporativo-ia-trajectory`;
+- nombre actual: `chatBot-trajectory`;
 - ID: `94a3895f-c3f4-4d9f-babc-91ab3022f5c2`;
 - casos: 6;
-- cobertura: Invitado, Empleado y Administrador.
+- cobertura histórica: los antiguos roles; estos resultados deben regenerarse para `chatBot`.
 
 Experimento válido:
 
@@ -28,9 +28,8 @@ Experimento válido:
 
 Interpretación:
 
-- el manager seleccionó el especialista correcto en todos los casos;
-- no se detectaron herramientas de empleados para Invitado ni campos
-  salariales para Empleado;
+- esta ejecución corresponde a la arquitectura anterior y no valida el agente único;
+- las próximas ejecuciones deben comprobar el nodo `chatBot` y el uso exclusivo de `knowledge_base`;
 - todas las ejecuciones terminaron con una respuesta no vacía y decisión
   `end`.
 
@@ -58,13 +57,13 @@ python -m trajectory_evaluation.create_dataset
 
 # Disponible aun sin modelo juez:
 python -m trajectory_evaluation.trajectory_accuracy `
-  --dataset agente-corporativo-ia-trajectory `
+  --dataset chatBot-trajectory `
   --experiment-prefix entrega-final-estructural `
   --skip-llm-judges
 
 # Requiere un modelo objetivo y juez disponible:
 python -m trajectory_evaluation.trajectory_accuracy `
-  --dataset agente-corporativo-ia-trajectory `
+  --dataset chatBot-trajectory `
   --experiment-prefix entrega-final-llm
 ```
 
@@ -77,8 +76,7 @@ python -m trajectory_evaluation.report_experiment `
 
 ## Criterio de aceptación
 
-La evidencia actual valida enrutamiento, autorización y finalización del grafo.
-No valida todavía la calidad semántica del LLM. Para declarar completa la
+La evidencia histórica no valida la arquitectura actual. Para declarar completa la
 evaluación de calidad, las tres métricas basadas en juez deben ejecutarse con un
 proveedor disponible y compararse con los objetivos definidos en
 `docs/metrics.md`.

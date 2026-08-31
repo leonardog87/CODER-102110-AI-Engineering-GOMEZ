@@ -9,6 +9,7 @@ from typing import List
 
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pypdf import PdfReader
 
 from rag.config import KNOWLEDGE_BASE_PATH, KNOWLEDGE_CHUNK_OVERLAP, KNOWLEDGE_CHUNK_SIZE
 
@@ -29,6 +30,21 @@ def _source_files() -> List[Path]:
 
 
 def _read_text(path: Path) -> List[Document]:
+    if path.suffix.lower() == ".pdf":
+        relative_path = path.relative_to(KNOWLEDGE_BASE_PATH).as_posix()
+        return [
+            Document(
+                page_content=text,
+                metadata={
+                    "source": relative_path,
+                    "source_title": path.stem,
+                    "page": page_number,
+                    "document_type": "pdf",
+                },
+            )
+            for page_number, page in enumerate(PdfReader(str(path)).pages, start=1)
+            if (text := (page.extract_text() or "").strip())
+        ]
     text = path.read_text(encoding="utf-8-sig").strip()
     if not text:
         return []

@@ -1,7 +1,6 @@
 streamlit
 fastapi
 uvicorn[standard]
-pandas
 python-dotenv
 langchain
 langgraph
@@ -15,4 +14,3 @@ openevals>=0.2,<0.3
 chromadb
 langchain-chroma
 pypdf
-mcp>=1.28,<2

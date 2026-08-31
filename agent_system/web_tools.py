@@ -22,7 +22,7 @@ from agent_system import retrieval_policy
 
 USER_AGENT = os.getenv(
     "WEB_SEARCH_USER_AGENT",
-    "AgenteCorporativo/1.0 (+busqueda-institucional-controlada)",
+    "chatBot/1.0 (+busqueda-controlada)",
 )
 WEB_TIMEOUT_SECONDS = float(os.getenv("WEB_SEARCH_TIMEOUT_SECONDS", "10"))
 WEB_MAX_CONTENT_CHARS = int(os.getenv("WEB_SEARCH_MAX_CONTENT_CHARS", "12000"))
@@ -194,13 +194,10 @@ def _tavily_search(query: str, max_results: int) -> dict[str, Any]:
 
 
 def _local_context(query: str, local_source: str, top_k: int) -> str:
-    if local_source == "complex":
-        from rag.pipeline import retrieve_context
+    # `local_source` se conserva por compatibilidad del contrato público.
+    from agent_system.tools import knowledge_retrieve_context
 
-        return retrieve_context(query=query, top_k=top_k)
-    from rag.knowledge_pipeline import retrieve_knowledge_context
-
-    return retrieve_knowledge_context(query=query, top_k=top_k)
+    return knowledge_retrieve_context.invoke({"query": query, "top_k": top_k})
 
 
 def _normalize_for_comparison(value: str) -> str:
@@ -290,7 +287,7 @@ def primary_retrieve_context(
 ) -> str:
     """Usa Web como fuente principal y RAG como respaldo automático."""
     clean_query = (query or "").strip()
-    source = "complex" if local_source == "complex" else "knowledge"
+    source = "knowledge"
     limit = max(1, min(top_k, WEB_SEARCH_MAX_RESULTS))
     if not clean_query:
         return _json({"error": "La consulta no puede estar vacía."})

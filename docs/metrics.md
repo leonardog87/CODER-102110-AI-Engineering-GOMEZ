@@ -10,7 +10,7 @@ Los experimentos de LangSmith producen feedback por ejemplo:
 | `trajectory_efficiency` | Trayectoria sin pasos o llamadas redundantes | ≥ 90% |
 | `answer_relevance` | La respuesta final atiende la consulta | ≥ 95% |
 
-Los objetivos deben calcularse sobre un dataset versionado y revisarse por rol.
+Los objetivos deben calcularse sobre un dataset versionado y revisarse por tipo de consulta.
 Una release no debería promoverse si cualquiera cae más de cinco puntos
 porcentuales respecto de la versión estable.
 
@@ -28,7 +28,7 @@ y trazas. Kubernetes aporta estado de Pods y consumo de recursos.
 | PVC | kubelet/CSI | más de 80% ocupado |
 | Error de ejecución | trazas LangSmith | más de 5% en 15 minutos |
 | Latencia extremo a extremo | trazas LangSmith | p95 superior a 30 segundos |
-| Error MCP | tool runs de LangSmith | más de 2% en 15 minutos |
+| Error de herramienta RAG | tool runs de LangSmith | más de 2% en 15 minutos |
 
 Las métricas `kube_*` requieren Metrics Server y, para series y alertas
 históricas, una instalación como Prometheus/Grafana o el servicio administrado
@@ -40,10 +40,10 @@ El tablero de producción debe mostrar:
 
 1. solicitudes, errores y p50/p95 de latencia;
 2. uso de modelos y tokens;
-3. llamadas y errores por herramienta MCP;
+3. llamadas y errores por herramienta RAG;
 4. scores de los tres evaluadores;
 5. salud, reinicios, CPU, memoria y ocupación de PVC;
-6. segmentación por versión de imagen y rol.
+6. segmentación por versión de imagen y fuente consultada.
 
 ## Trazabilidad de releases
 

@@ -20,8 +20,7 @@ dist
 build
 *.egg-info
 data/*.sqlite3
-manuales_complejos_chroma_db
-manuales_simples_chroma_db
+knowledge_base_chroma_db
 raw_data/*.tmp
 test_*.py
 ver_*.py

@@ -44,11 +44,8 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q .
 
-      - name: Test persistence and role isolation
+      - name: Test chat history persistence
         run: python tests/test_persistence.py
-
-      - name: Test MCP protocol and authorization
-        run: python tests/test_mcp_protocol.py
 
       - name: Test RAG retrieval relevance
         run: python tests/test_rag_retrieval.py
@@ -80,6 +77,6 @@ jobs:
         with:
           context: .
           push: false
-          tags: agente-corporativo-ia:ci
+          tags: chatbot:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max

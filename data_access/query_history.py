@@ -1,4 +1,4 @@
-"""Persistencia de consultas y auditoría aislada por rol."""
+"""Persistencia del historial único de chatBot."""
 
 from __future__ import annotations
 
@@ -7,27 +7,23 @@ from typing import Any, Dict, List
 
 from data_access.database import get_connection
 
-ALLOWED_HISTORY_ROLES = {"Invitado", "Empleado", "Administrador"}
+HISTORY_SCOPE = "General"
 
 
 def _validate_role(role: str) -> str:
     normalized = str(role).strip()
-    if normalized not in ALLOWED_HISTORY_ROLES:
-        raise ValueError(f"Rol no autorizado para historial: {role!r}")
-    return normalized
+    if normalized != HISTORY_SCOPE:
+        raise ValueError(f"Ámbito no autorizado para historial: {role!r}")
+    return HISTORY_SCOPE
 
 
-def ensure_query_history_table() -> None:
-    """Crea la tabla persistente sin alterar la tabla de empleados."""
-    conn = get_connection()
+def _create_query_history_table(conn) -> None:
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS query_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            role TEXT NOT NULL CHECK (
-                role IN ('Invitado', 'Empleado', 'Administrador')
-            ),
+            role TEXT NOT NULL DEFAULT 'General' CHECK (role = 'General'),
             agent_name TEXT NOT NULL,
             user_query TEXT NOT NULL,
             assistant_response TEXT NOT NULL,
@@ -39,6 +35,36 @@ def ensure_query_history_table() -> None:
         )
         """
     )
+
+
+def ensure_query_history_table() -> None:
+    """Crea o migra el historial anterior basado en roles."""
+    conn = get_connection()
+    table = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'query_history'"
+    ).fetchone()
+    if table is not None and "role = 'General'" not in str(table["sql"]):
+        conn.execute("DROP INDEX IF EXISTS idx_query_history_role_id")
+        conn.execute("ALTER TABLE query_history RENAME TO query_history_legacy")
+        _create_query_history_table(conn)
+        conn.execute(
+            """
+            INSERT INTO query_history (
+                id, created_at, role, agent_name, user_query,
+                assistant_response, designation_reason, tool_traces_json,
+                cycle_count, evaluation_decision, evaluation_reason
+            )
+            SELECT
+                id, created_at, 'General', 'chatBot', user_query,
+                assistant_response, 'Registro migrado al agente único.',
+                tool_traces_json, cycle_count, evaluation_decision,
+                evaluation_reason
+            FROM query_history_legacy
+            """
+        )
+        conn.execute("DROP TABLE query_history_legacy")
+    else:
+        _create_query_history_table(conn)
     existing_columns = {
         row["name"] for row in conn.execute("PRAGMA table_info(query_history)")
     }
@@ -73,7 +99,7 @@ def save_query_record(
     evaluation_decision: str = "end",
     evaluation_reason: str = "",
 ) -> int:
-    """Guarda una interacción asociada exclusivamente a su rol."""
+    """Guarda una interacción en el historial único."""
     authorized_role = _validate_role(role)
     ensure_query_history_table()
     conn = get_connection()
@@ -109,7 +135,7 @@ def save_query_record(
 
 
 def load_query_history(role: str, limit: int = 100) -> List[Dict[str, Any]]:
-    """Recupera solamente las consultas pertenecientes al rol solicitado."""
+    """Recupera las consultas del historial único."""
     authorized_role = _validate_role(role)
     safe_limit = max(1, min(int(limit), 500))
     ensure_query_history_table()

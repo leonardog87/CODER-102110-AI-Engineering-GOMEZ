@@ -47,6 +47,11 @@ def _tokenize(text: str) -> List[str]:
     return [token for token in tokens if token not in STOPWORDS and len(token) > 2]
 
 
+def has_lexical_overlap(query: str, document: Document) -> bool:
+    """Indica si existe al menos un término significativo compartido."""
+    return bool(set(_tokenize(query)) & set(_tokenize(document.page_content)))
+
+
 def rerank_documents(
     query: str,
     docs: List[Document],

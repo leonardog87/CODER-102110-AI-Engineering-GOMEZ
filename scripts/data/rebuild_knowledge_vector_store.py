@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Recrea desde cero la base Chroma de conocimiento simple."""
+"""Recrea desde cero el índice Chroma de knowledge_base."""
 
 from __future__ import annotations
 
@@ -57,7 +57,10 @@ def rebuild_knowledge_chromadb() -> bool:
             get_knowledge_chunks,
             load_knowledge_documents,
         )
-        from rag.vector_store import get_embeddings, normalized_euclidean_relevance
+        from rag.knowledge_vector_store import (
+            get_embeddings,
+            normalized_euclidean_relevance,
+        )
 
         documents = load_knowledge_documents()
         chunks = get_knowledge_chunks()
@@ -85,7 +88,7 @@ def rebuild_knowledge_chromadb() -> bool:
         )
 
         sources = sorted({document.metadata["source"] for document in documents})
-        logger.info("Base de conocimiento simple recreada correctamente.")
+        logger.info("Índice de knowledge_base recreado correctamente.")
         logger.info("Fuentes: %s", ", ".join(sources))
         logger.info("Documentos: %s", len(documents))
         logger.info("Chunks: %s", vector_store._collection.count())

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: app-data
-  namespace: agente-corporativo-ia
+  namespace: chatbot
 spec:
   accessModes:
     - ReadWriteOnce
@@ -13,20 +13,8 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: complex-chroma
-  namespace: agente-corporativo-ia
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: simple-chroma
-  namespace: agente-corporativo-ia
+  name: knowledge-chroma
+  namespace: chatbot
 spec:
   accessModes:
     - ReadWriteOnce

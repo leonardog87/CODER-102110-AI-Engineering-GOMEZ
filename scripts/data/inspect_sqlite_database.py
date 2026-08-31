@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Muestra el contenido de la base SQLite generada desde los archivos CSV.
+"""Muestra, en modo de solo lectura, la base SQLite de chatBot.
 
 Ejemplos:
     python scripts/data/inspect_sqlite_database.py
-    python scripts/data/inspect_sqlite_database.py --tabla empleados
-    python scripts/data/inspect_sqlite_database.py --tabla empleados --limite 20
+    python scripts/data/inspect_sqlite_database.py --tabla query_history
+    python scripts/data/inspect_sqlite_database.py --tabla query_history --limite 20
     python scripts/data/inspect_sqlite_database.py --sin-limite
 """
 
@@ -24,7 +24,7 @@ from data_access.config import SQLITE_DB_PATH
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Consulta, sin modificar, la base SQLite migrada desde CSV."
+        description="Consulta, sin modificar, la base SQLite de chatBot."
     )
     parser.add_argument(
         "--tabla",
@@ -116,8 +116,7 @@ def main() -> int:
     if not db_path.is_file():
         raise SystemExit(
             f"No se encontró la base de datos: {db_path}\n"
-            "Creala ejecutando: "
-            "python scripts/data/migrate_employees_to_sqlite.py"
+            "Se crea automáticamente al iniciar la aplicación o la API."
         )
 
     # mode=ro garantiza que este visor no pueda modificar la base.

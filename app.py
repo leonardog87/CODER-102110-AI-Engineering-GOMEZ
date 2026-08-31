@@ -1,7 +1,7 @@
 """
 app.py
 ------
-Interfaz principal de "Agente Corporativo IA" con Streamlit.
+Interfaz principal de "chatBot" con Streamlit.
 """
 
 from __future__ import annotations
@@ -17,21 +17,13 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from data_access.query_history import load_query_history, save_query_record
 
-from agent_system.constants import (
-    AGENT_MANAGER,
-    DEFAULT_AGENT,
-    DEFAULT_ROLE,
-    ROLE_ADMINISTRADOR,
-    ROLE_EMPLEADO,
-    ROLE_INVITADO,
-    ROLE_TO_AGENT,
-)
+from agent_system.constants import AGENT_CHATBOT, DEFAULT_AGENT, DEFAULT_ROLE
 
 # ---------------------------------------------------------------------
 # Configuración de logging
 # ---------------------------------------------------------------------
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("agente_corporativo.app")
+logger = logging.getLogger("chatBot.app")
 
 # ---------------------------------------------------------------------
 # Carga de variables de entorno.
@@ -76,7 +68,7 @@ if token:
     os.environ["HUGGINGFACEHUB_API_TOKEN"] = token
 
 # ---------------------------------------------------------------------
-# Importación del grafo de agentes después de cargar el entorno.
+# Importación del grafo del agente después de cargar el entorno.
 # ---------------------------------------------------------------------
 try:
     from agent_system import app_graph
@@ -92,7 +84,7 @@ else:
 # Configuración de página.
 # ---------------------------------------------------------------------
 st.set_page_config(
-    page_title="Agente Corporativo IA",
+    page_title="chatBot",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -101,40 +93,6 @@ st.set_page_config(
 # ---------------------------------------------------------------------
 # Rutas solicitadas por el enunciado.
 # ---------------------------------------------------------------------
-
-ROLE_OPTIONS = {
-    "Invitado": ROLE_INVITADO,
-    "Empleado": ROLE_EMPLEADO,
-    "Administrador": ROLE_ADMINISTRADOR,
-}
-
-ROLE_PERMISSIONS = {
-    ROLE_INVITADO: {
-        "Manuales simples": "Habilitado",
-        "Manuales complejos": "Bloqueado",
-        "SQLite empleados": "Bloqueado",
-        "badge": "🟡 Invitado",
-    },
-    ROLE_EMPLEADO: {
-        "Manuales simples": "Habilitado",
-        "Manuales complejos": "Habilitado",
-        "SQLite empleados": "Sin salarios",
-        "badge": "🟠 Empleado",
-    },
-    ROLE_ADMINISTRADOR: {
-        "Manuales simples": "Habilitado",
-        "Manuales complejos": "Habilitado",
-        "SQLite empleados": "Acceso completo",
-        "badge": "🟢 Administrador",
-    },
-}
-
-SIMPLE_MANUAL_TOPICS = [
-    "Registro y verificación de cuenta",
-    "Recuperación de contraseña",
-    "Contacto y recomendaciones de seguridad",
-]
-
 
 # ---------------------------------------------------------------------
 # Estado inicial de la app.
@@ -147,17 +105,17 @@ def init_session_state() -> None:
     if "loaded_history_roles" not in st.session_state:
         st.session_state.loaded_history_roles = set()
     if "selected_role_label" not in st.session_state:
-        st.session_state.selected_role_label = "Invitado"
+        st.session_state.selected_role_label = "General"
     if "langsmith_enabled" not in st.session_state:
         st.session_state.langsmith_enabled = os.getenv("LANGSMITH_TRACING", "true").lower() == "true"
 
 
 def role_to_internal(role_label: str) -> str:
-    return ROLE_OPTIONS.get(role_label, DEFAULT_ROLE)
+    return DEFAULT_ROLE
 
 
 def internal_to_node(role: str) -> str:
-    return ROLE_TO_AGENT.get(role, DEFAULT_AGENT)
+    return DEFAULT_AGENT
 
 
 def ensure_role_history_loaded(role: str) -> None:
@@ -179,9 +137,9 @@ def ensure_role_history_loaded(role: str) -> None:
             {
                 "record_id": record["id"],
                 "created_at": record["created_at"],
-                "rol_usuario": record["role"],
+                "ambito_historial": record["role"],
                 "nodo_ejecutado": record["agent_name"],
-                "agente_encargado": AGENT_MANAGER,
+                "agente_encargado": AGENT_CHATBOT,
                 "motivo_designacion": record["designation_reason"],
                 "cycle_count": record["cycle_count"],
                 "evaluation_decision": record["evaluation_decision"],
@@ -326,38 +284,22 @@ def render_topbar() -> str:
 
             with name_column:
                 st.markdown(
-                    '<p class="agent-brand-name">Agente Corporativo IA</p>',
+                    '<p class="agent-brand-name">chatBot</p>',
                     unsafe_allow_html=True,
                 )
 
-        with role_column:
-            selected_label = st.selectbox(
-                "Rol de acceso",
-                list(ROLE_OPTIONS.keys()),
-                index=list(ROLE_OPTIONS.keys()).index(
-                    st.session_state.selected_role_label
-                )
-                if st.session_state.selected_role_label in ROLE_OPTIONS
-                else 0,
-                key="role_selector",
-                label_visibility="collapsed",
-            )
-
-        st.session_state.selected_role_label = selected_label
-        role = role_to_internal(selected_label)
-        perms = ROLE_PERMISSIONS[role]
+        role = DEFAULT_ROLE
 
         with status_column:
             trace_status = "activa" if st.session_state.langsmith_enabled else "inactiva"
             st.markdown(
-                f"**🔐 {perms['badge']}** · Trazabilidad {trace_status}"
+                f"**🤖 Agente único** · Trazabilidad {trace_status}"
             )
 
-        permission_columns = st.columns(3)
+        permission_columns = st.columns(2)
         permission_items = (
-            ("📘 Manuales simples", perms["Manuales simples"]),
-            ("📚 Manuales complejos", perms["Manuales complejos"]),
-            ("🗃️ SQLite empleados", perms["SQLite empleados"]),
+            ("📘 knowledge_base", "Habilitado"),
+            ("🤖 Agente", "chatBot"),
         )
         for column, (label, value) in zip(permission_columns, permission_items):
             with column:
@@ -371,14 +313,7 @@ def render_topbar() -> str:
 
 
 def render_header(role: str) -> None:
-    st.caption("Asistente corporativo con acceso controlado por rol")
-
-    if role == ROLE_INVITADO:
-        st.markdown("### Temas disponibles en los manuales simples")
-        cols = st.columns(3)
-        for col, topic in zip(cols, SIMPLE_MANUAL_TOPICS):
-            with col:
-                st.info(topic)
+    st.caption("Asistente genérico basado en las fuentes de conocimiento del negocio")
 
 
 def _extract_last_ai_message(messages: List[BaseMessage]) -> str:
@@ -419,9 +354,9 @@ def append_audit_entry(
     agente_designado = result_state.get("agente_designado") or internal_to_node(role)
     motivo_designacion = result_state.get("motivo_designacion") or "Designacion no informada por el grafo."
     entry = {
-        "rol_usuario": role,
+        "ambito_historial": role,
         "nodo_ejecutado": agente_designado,
-        "agente_encargado": AGENT_MANAGER,
+        "agente_encargado": AGENT_CHATBOT,
         "motivo_designacion": motivo_designacion,
         "cycle_count": int(result_state.get("cycle_count", 1)),
         "evaluation_decision": result_state.get("evaluation_decision", "end"),
@@ -456,14 +391,14 @@ def render_chat_history(role: str) -> None:
 
 def render_audit_panel(role: str) -> None:
     audit_log = role_audit_log(role)
-    with st.expander("🛠️ Auditoría de Procesamiento MCP / RAG", expanded=False):
+    with st.expander("🛠️ Auditoría de procesamiento RAG", expanded=False):
         if not audit_log:
             st.info("Todavía no hay trazas. Envía un mensaje para ver el recorrido completo.")
             return
 
         last = audit_log[-1]
-        st.markdown(f"**Rol:** `{last['rol_usuario']}`")
-        st.markdown(f"**Agente encargado:** `{last.get('agente_encargado', AGENT_MANAGER)}`")
+        st.markdown(f"**Ámbito:** `{last['ambito_historial']}`")
+        st.markdown(f"**Agente:** `{last.get('agente_encargado', AGENT_CHATBOT)}`")
         st.markdown(f"**Nodo LangGraph ejecutado:** `{last['nodo_ejecutado']}`")
         st.markdown(f"**Motivo de designacion:** {last.get('motivo_designacion', 'No informado.')}")
         st.markdown(
@@ -547,7 +482,7 @@ def invoke_graph(
     """
     if app_graph is None:
         raise RuntimeError(
-            f"No se pudo importar el grafo de agentes: {AGENTS_IMPORT_ERROR}"
+            f"No se pudo importar el grafo de chatBot: {AGENTS_IMPORT_ERROR}"
         )
 
     # Configuración de entrada
@@ -562,7 +497,6 @@ def invoke_graph(
 
     input_state = {
         "messages": contextual_messages,
-        "rol_usuario": role,
     }
 
     # Verificar si LangSmith está activado
@@ -598,7 +532,7 @@ def invoke_graph(
 
 def main() -> None:
     global logger
-    logger = logging.getLogger("agente_corporativo.app")
+    logger = logging.getLogger("chatBot.app")
 
     init_session_state()
     role = render_topbar()
@@ -607,7 +541,7 @@ def main() -> None:
 
     if app_graph is None:
         st.error(
-            "No se pudo cargar el grafo de agentes. "
+            "No se pudo cargar el grafo de chatBot. "
             "Revisá la configuración del LLM y las dependencias."
         )
         with st.expander("Detalle técnico", expanded=False):
@@ -616,7 +550,7 @@ def main() -> None:
 
     render_chat_history(role)
 
-    user_input = st.chat_input("Escribí tu consulta para el Agente Corporativo IA...")
+    user_input = st.chat_input("Escribí tu consulta para chatBot...")
 
     if user_input:
         chat_history = role_chat_history(role)
@@ -624,7 +558,7 @@ def main() -> None:
         chat_history.append({"role": "user", "content": user_input})
 
         try:
-            with st.spinner("Procesando con LangGraph, RAG y MCP..."):
+            with st.spinner("Procesando con LangGraph y RAG..."):
                 result_state = invoke_graph(
                     user_input=user_input,
                     role=role,

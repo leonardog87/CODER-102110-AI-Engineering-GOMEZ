@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: agente-corporativo-ia
-  namespace: agente-corporativo-ia
+  name: chatbot
+  namespace: chatbot
   labels:
-    app.kubernetes.io/name: agente-corporativo-ia
+    app.kubernetes.io/name: chatbot
 spec:
   type: ClusterIP
   selector:
-    app.kubernetes.io/name: agente-corporativo-ia
+    app.kubernetes.io/name: chatbot
   ports:
     - name: http
       port: 80

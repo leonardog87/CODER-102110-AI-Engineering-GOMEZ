@@ -17,27 +17,32 @@ from agent_system.web_tools import (  # noqa: E402
     web_retrieve_allowed_url,
     web_search_allowed,
 )
-from agent_system.invitado_agent import INVITADO_TOOLS  # noqa: E402
-from agent_system.empleado_agent import EMPLEADO_TOOLS  # noqa: E402
-from agent_system.administrador_agent import ADMINISTRADOR_TOOLS  # noqa: E402
+from agent_system.chatbot_agent import CHATBOT_TOOLS  # noqa: E402
+from agent_system.runtime import _text_tool_calls  # noqa: E402
 
 
 def main() -> int:
     local_tool = SimpleNamespace(name="knowledge_retrieve_context")
-    sqlite_tool = SimpleNamespace(name="consultar_empleados_mcp_empleado")
     external_tool = SimpleNamespace(name="web_search")
     retrieval_policy.WEB_SEARCH_ENABLED = False
     selected = retrieval_policy.enabled_tools(
-        [local_tool, sqlite_tool, external_tool]
+        [local_tool, external_tool]
     )
 
     assert [tool.name for tool in selected] == [
         "knowledge_retrieve_context",
-        "consultar_empleados_mcp_empleado",
     ]
     assert all(tool.name in retrieval_policy.LOCAL_TOOL_NAMES for tool in selected)
-    for role_tools in (INVITADO_TOOLS, EMPLEADO_TOOLS, ADMINISTRADOR_TOOLS):
-        assert not ({tool.name for tool in role_tools} & retrieval_policy.WEB_TOOL_NAMES)
+    assert not ({tool.name for tool in CHATBOT_TOOLS} & retrieval_policy.WEB_TOOL_NAMES)
+    assert "knowledge_retrieve_context" in {tool.name for tool in CHATBOT_TOOLS}
+    assert "verificar_respuesta_con_fuentes" not in {
+        tool.name for tool in CHATBOT_TOOLS
+    }
+    parsed = _text_tool_calls(
+        '<tool_call>{"name":"knowledge_retrieve_context",'
+        '"arguments":{"query":"como me registro?","top_k":2}}</tool_call>'
+    )
+    assert parsed[0]["name"] == "knowledge_retrieve_context"
 
     assert "desactivada" in web_search_allowed.invoke({"query": "prueba"})
     assert "desactivada" in web_retrieve_allowed_url.invoke(

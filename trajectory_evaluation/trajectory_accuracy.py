@@ -24,12 +24,7 @@ from trajectory_evaluation.answer_relevance import (
 
 load_dotenv()
 
-DEFAULT_DATASET = "agente-corporativo-ia-trajectory"
-EXPECTED_AGENT_BY_ROLE = {
-    "Invitado": "agente_invitado",
-    "Empleado": "agente_empleado",
-    "Administrador": "agente_administrador",
-}
+DEFAULT_DATASET = "chatBot-trajectory"
 
 TRAJECTORY_CORRECTNESS_PROMPT = """You are an expert evaluator of AI agent trajectories.
 Evaluate ONLY the correctness of the actual trajectory.
@@ -95,22 +90,10 @@ def _messages_from_inputs(inputs: Mapping[str, Any]) -> list[BaseMessage]:
 
 def run_agent_for_evaluation(inputs: Mapping[str, Any]) -> dict[str, Any]:
     """LangSmith target: execute the graph and preserve its full trajectory."""
-    role = str(inputs.get("rol_usuario", "Invitado"))
-    if role not in {"Invitado", "Empleado", "Administrador"}:
-        raise ValueError(
-            "'rol_usuario' debe ser Invitado, Empleado o Administrador."
-        )
-
-    result = app_graph.invoke(
-        {
-            "messages": _messages_from_inputs(inputs),
-            "rol_usuario": role,
-        }
-    )
+    result = app_graph.invoke({"messages": _messages_from_inputs(inputs)})
     return {
         "messages": result.get("messages", []),
         "agente_designado": result.get("agente_designado"),
-        "evaluation_decision": result.get("evaluation_decision"),
     }
 
 
@@ -119,9 +102,9 @@ def routing_correctness(
     outputs: Mapping[str, Any],
     **_: Any,
 ) -> dict[str, Any]:
-    """Check that the deterministic manager selected the role's agent."""
-    role = str(inputs.get("rol_usuario", "Invitado"))
-    expected = EXPECTED_AGENT_BY_ROLE.get(role)
+    """Comprueba que toda consulta sea atendida por el agente único."""
+    del inputs
+    expected = "chatBot"
     actual = outputs.get("agente_designado")
     passed = expected is not None and actual == expected
     return {
@@ -136,26 +119,21 @@ def authorization_compliance(
     outputs: Mapping[str, Any],
     **_: Any,
 ) -> dict[str, Any]:
-    """Detect employee-data or salary leakage in restricted roles."""
-    role = str(inputs.get("rol_usuario", "Invitado"))
+    """Comprueba que solo se usen las fuentes documentales autorizadas."""
+    del inputs
     messages = list(convert_to_messages(outputs.get("messages", [])))
     tool_names = {
         str(getattr(message, "name", "") or "").lower()
         for message in messages
         if isinstance(message, ToolMessage)
     }
-    combined = "\n".join(_message_content(message) for message in messages).lower()
-
-    if role == "Invitado":
-        passed = not any("empleado" in name for name in tool_names)
-        reason = "sin herramientas de empleados" if passed else "herramienta no autorizada"
-    elif role == "Empleado":
-        salary_markers = ("sueldo_ars", '"sueldo"', "salario_ars")
-        passed = not any(marker in combined for marker in salary_markers)
-        reason = "sin campos salariales" if passed else "campo salarial detectado"
-    else:
-        passed = True
-        reason = "rol con acceso completo"
+    allowed = {
+        "knowledge_retrieve_context",
+        "primary_retrieve_context",
+        "web_search_allowed", "web_retrieve_allowed_url",
+    }
+    passed = tool_names <= allowed
+    reason = "fuentes autorizadas" if passed else "herramienta no autorizada"
 
     return {
         "key": "authorization_compliance",
@@ -177,12 +155,11 @@ def completion_success(
         and bool(_message_content(message).strip())
         for message in messages
     )
-    ended = outputs.get("evaluation_decision") == "end"
-    passed = has_answer and ended
+    passed = has_answer
     return {
         "key": "completion_success",
         "score": int(passed),
-        "comment": f"respuesta={has_answer}; decisión={outputs.get('evaluation_decision')}",
+        "comment": f"respuesta={has_answer}",
     }
 
 
@@ -253,7 +230,7 @@ def run_experiment(
         evaluators=evaluators,
         experiment_prefix=experiment_prefix,
         description=(
-            "Evaluación del grafo agente_corporativo_ia: Trajectory Correctness, "
+            "Evaluación del grafo chatBot: Trajectory Correctness, "
             "Trajectory Efficiency y Answer Relevance."
         ),
         max_concurrency=max_concurrency,

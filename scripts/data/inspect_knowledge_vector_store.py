@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Muestra los fragmentos guardados en la base Chroma de manuales simples."""
+"""Muestra los fragmentos guardados en el índice de knowledge_base."""
 
 from __future__ import annotations
 
@@ -10,15 +10,15 @@ from dotenv import load_dotenv
 
 
 def inspect_knowledge_vector_store() -> None:
-    """Lista colecciones, metadatos y texto de los manuales simples."""
+    """Lista colecciones, metadatos y texto de knowledge_base."""
     load_dotenv()
     persist_directory = os.getenv(
         "KNOWLEDGE_CHROMA_PERSIST_DIR",
-        "./manuales_simples_chroma_db",
+        "./knowledge_base_chroma_db",
     )
 
     print("=" * 70)
-    print(f"Base Chroma de manuales simples: {persist_directory}")
+    print(f"Base Chroma de knowledge_base: {persist_directory}")
     print("=" * 70)
 
     client = chromadb.PersistentClient(path=persist_directory)

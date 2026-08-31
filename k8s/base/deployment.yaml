@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agente-corporativo-ia
-  namespace: agente-corporativo-ia
+  name: chatbot
+  namespace: chatbot
   labels:
-    app.kubernetes.io/name: agente-corporativo-ia
+    app.kubernetes.io/name: chatbot
     app.kubernetes.io/component: application
 spec:
   replicas: 1
@@ -12,14 +12,14 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app.kubernetes.io/name: agente-corporativo-ia
+      app.kubernetes.io/name: chatbot
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: agente-corporativo-ia
+        app.kubernetes.io/name: chatbot
         app.kubernetes.io/component: application
     spec:
-      serviceAccountName: agente-corporativo-ia
+      serviceAccountName: chatbot
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -31,7 +31,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: app
-          image: agente-corporativo-ia:latest
+          image: chatbot:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -42,9 +42,9 @@ spec:
               value: /tmp
           envFrom:
             - configMapRef:
-                name: agente-corporativo-ia-config
+                name: chatbot-config
             - secretRef:
-                name: agente-corporativo-ia-secrets
+                name: chatbot-secrets
           resources:
             requests:
               cpu: 500m
@@ -82,22 +82,17 @@ spec:
           volumeMounts:
             - name: app-data
               mountPath: /app/data
-            - name: complex-chroma
-              mountPath: /app/manuales_complejos_chroma_db
-            - name: simple-chroma
-              mountPath: /app/manuales_simples_chroma_db
+            - name: knowledge-chroma
+              mountPath: /app/knowledge_base_chroma_db
             - name: tmp
               mountPath: /tmp
       volumes:
         - name: app-data
           persistentVolumeClaim:
             claimName: app-data
-        - name: complex-chroma
+        - name: knowledge-chroma
           persistentVolumeClaim:
-            claimName: complex-chroma
-        - name: simple-chroma
-          persistentVolumeClaim:
-            claimName: simple-chroma
+            claimName: knowledge-chroma
         - name: tmp
           emptyDir:
             sizeLimit: 4Gi

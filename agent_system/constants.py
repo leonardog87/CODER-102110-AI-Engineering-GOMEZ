@@ -1,19 +1,5 @@
-"""Shared role and agent identifiers."""
+"""Identificador del único agente del proyecto."""
 
-ROLE_INVITADO = "Invitado"
-ROLE_EMPLEADO = "Empleado"
-ROLE_ADMINISTRADOR = "Administrador"
-
-AGENT_MANAGER = "agente_encargado"
-AGENT_INVITADO = "agente_invitado"
-AGENT_EMPLEADO = "agente_empleado"
-AGENT_ADMINISTRADOR = "agente_administrador"
-
-ROLE_TO_AGENT = {
-    ROLE_INVITADO: AGENT_INVITADO,
-    ROLE_EMPLEADO: AGENT_EMPLEADO,
-    ROLE_ADMINISTRADOR: AGENT_ADMINISTRADOR,
-}
-
-DEFAULT_ROLE = ROLE_INVITADO
-DEFAULT_AGENT = AGENT_INVITADO
+AGENT_CHATBOT = "chatBot"
+DEFAULT_AGENT = AGENT_CHATBOT
+DEFAULT_ROLE = "General"

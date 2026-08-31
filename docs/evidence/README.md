@@ -9,52 +9,51 @@ Entorno:
 - Docker Engine `29.4.3`;
 - kind `v0.31.0`;
 - Kubernetes `v1.35.0`;
-- contexto `kind-agente-corporativo-ia`;
-- imagen `agente-corporativo-ia:local`.
+- contexto `kind-chatbot`;
+- imagen `chatbot:local`.
 
 Procedimiento ejecutado:
 
 ```powershell
-docker build -t agente-corporativo-ia:local .
+docker build -t chatbot:local .
 .\.local-tools\kind.exe create cluster `
   --config k8s/local/kind-config.yaml
 .\.local-tools\kind.exe load docker-image `
-  agente-corporativo-ia:local `
-  --name agente-corporativo-ia
+  chatbot:local `
+  --name chatbot
 kubectl apply -f k8s/base/namespace.yaml
-kubectl -n agente-corporativo-ia create secret generic `
-  agente-corporativo-ia-secrets `
+kubectl -n chatbot create secret generic `
+  chatbot-secrets `
   --from-env-file=k8s/secrets.env `
   --dry-run=client -o yaml |
   kubectl apply -f -
 kubectl apply -k k8s/overlays/local
-kubectl rollout status deployment/agente-corporativo-ia `
-  -n agente-corporativo-ia --timeout=10m
+kubectl rollout status deployment/chatbot `
+  -n chatbot --timeout=10m
 ```
 
 Resultado del rollout:
 
 ```text
-deployment "agente-corporativo-ia" successfully rolled out
+deployment "chatbot" successfully rolled out
 ```
 
 Estado observado:
 
 ```text
 RESOURCE                               READY/STATUS
-Deployment agente-corporativo-ia       1/1 Available
-Pod agente-corporativo-ia-*            1/1 Running, 0 restarts
-Service agente-corporativo-ia          ClusterIP, port 80/TCP
+Deployment chatbot       1/1 Available
+Pod chatbot-*            1/1 Running, 0 restarts
+Service chatbot          ClusterIP, port 80/TCP
 PVC app-data                           Bound, 2Gi, RWO
-PVC complex-chroma                     Bound, 5Gi, RWO
-PVC simple-chroma                      Bound, 5Gi, RWO
+PVC knowledge-chroma                   Bound, 5Gi, RWO
 NetworkPolicy                          Created
 ConfigMap                              Created, 15 entries
 Secret                                 Created, type Opaque
 ```
 
 La imagen reportada por el Deployment fue
-`agente-corporativo-ia:local`, con una réplica lista y disponible.
+`chatbot:local`, con una réplica lista y disponible.
 
 Verificación HTTP mediante port-forward temporal:
 

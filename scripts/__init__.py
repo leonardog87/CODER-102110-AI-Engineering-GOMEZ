@@ -1,1 +1,1 @@
-"""Operational scripts for Agente Corporativo IA."""
+"""Scripts operativos de chatBot."""

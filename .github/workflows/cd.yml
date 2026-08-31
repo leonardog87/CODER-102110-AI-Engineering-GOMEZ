@@ -37,7 +37,6 @@ jobs:
         run: |
           python -m compileall -q .
           python tests/test_persistence.py
-          python tests/test_mcp_protocol.py
           python tests/test_rag_retrieval.py
 
   publish:
@@ -144,11 +143,11 @@ jobs:
         if: ${{ env.KUBE_CONFIG_B64 != '' && env.K8S_HOST != '' }}
         shell: bash
         run: |
-          kubectl get secret agente-corporativo-ia-secrets -n agente-corporativo-ia
-          sed -i "s/agente-corporativo-ia.example.com/${K8S_HOST}/g" \
+          kubectl get secret chatbot-secrets -n chatbot
+          sed -i "s/chatbot.example.com/${K8S_HOST}/g" \
             k8s/overlays/production/ingress.yaml
           cd k8s/overlays/production
-          kubectl kustomize edit set image "agente-corporativo-ia=${IMAGE}"
+          kubectl kustomize edit set image "chatbot=${IMAGE}"
           kubectl apply -k .
-          kubectl rollout status deployment/agente-corporativo-ia \
-            -n agente-corporativo-ia --timeout=10m
+          kubectl rollout status deployment/chatbot \
+            -n chatbot --timeout=10m

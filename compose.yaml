@@ -2,15 +2,14 @@ services:
   app:
     build:
       context: .
-    image: agente-corporativo-ia:local
+    image: chatbot:local
     init: true
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      AGENTE_CORPORATIVO_DB: /app/data/agente_corporativo.sqlite3
-      CHROMA_PERSIST_DIR: /app/manuales_complejos_chroma_db
-      KNOWLEDGE_CHROMA_PERSIST_DIR: /app/manuales_simples_chroma_db
+      CHATBOT_DB: /app/data/chatBot.sqlite3
+      KNOWLEDGE_CHROMA_PERSIST_DIR: /app/knowledge_base_chroma_db
     ports:
       - "8501:8501"
     healthcheck:
@@ -25,30 +24,26 @@ services:
       retries: 3
     volumes:
       - app-data:/app/data
-      - complex-chroma:/app/manuales_complejos_chroma_db
-      - simple-chroma:/app/manuales_simples_chroma_db
+      - knowledge-chroma:/app/knowledge_base_chroma_db
 
   api:
     build:
       context: .
-    image: agente-corporativo-ia:local
+    image: chatbot:local
     init: true
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      AGENTE_CORPORATIVO_DB: /app/data/agente_corporativo.sqlite3
-      CHROMA_PERSIST_DIR: /app/manuales_complejos_chroma_db
-      KNOWLEDGE_CHROMA_PERSIST_DIR: /app/manuales_simples_chroma_db
+      CHATBOT_DB: /app/data/chatBot.sqlite3
+      KNOWLEDGE_CHROMA_PERSIST_DIR: /app/knowledge_base_chroma_db
     command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8000:8000"
     volumes:
       - app-data:/app/data
-      - complex-chroma:/app/manuales_complejos_chroma_db
-      - simple-chroma:/app/manuales_simples_chroma_db
+      - knowledge-chroma:/app/knowledge_base_chroma_db
 
 volumes:
   app-data:
-  complex-chroma:
-  simple-chroma:
+  knowledge-chroma:
