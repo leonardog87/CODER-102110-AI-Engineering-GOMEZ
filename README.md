@@ -80,22 +80,25 @@ OPENAI_MODEL=...
 También puede utilizarse `HUGGINGFACEHUB_API_TOKEN` y `HF_MODEL_ID`. El `.env`
 real está excluido de Git y no debe contenerse en la imagen.
 
-La recuperación de información usa exclusivamente los manuales vectorizados y
-la base SQLite. La búsqueda web externa está desactivada por defecto:
+La búsqueda web externa está desactivada por defecto, por lo que la recuperación
+usa exclusivamente los manuales vectorizados y la base SQLite:
 
 ```env
 WEB_SEARCH_ENABLED=false
 WEB_SEARCH_PROVIDER=tavily
 WEB_SEARCH_API_KEY=
 WEB_SEARCH_ALLOWED_DOMAINS=argentina.gob.ar
+WEB_SYNC_LOCAL_ON_DIFFERENCE=true
 ```
 
-La variable `WEB_SEARCH_ENABLED` queda disponible para una integración web
-opcional. Mientras sea `false`, las herramientas `web_search_allowed` y
-`web_retrieve_allowed_url` se filtran antes de exponerse al modelo. Para
-activarlas, configurá la clave del proveedor, uno o más dominios separados por
-comas y reiniciá la aplicación. Aun habilitadas, los agentes deben consultar
-primero los manuales vectorizados y SQLite.
+Al cambiar `WEB_SEARCH_ENABLED=true`, `primary_retrieve_context` consulta Tavily
+como fuente principal. Si Tavily no está disponible, falla la conexión o no hay
+resultados autorizados, la herramienta usa automáticamente RAG local. El contenido
+web nuevo o modificado se sincroniza con URL y fecha en
+`knowledge_base/actualizaciones_web.md`, sin sobrescribir los manuales canónicos.
+Para activarlo, configurá la clave del proveedor, uno o más dominios separados por
+comas y reiniciá la aplicación. Las herramientas web solo pueden consultar
+`WEB_SEARCH_ALLOWED_DOMAINS`.
 
 ## Ejecución rápida
 

@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
 import ipaddress
 import json
 import os
 import socket
+import threading
+from datetime import datetime, timezone
 from html.parser import HTMLParser
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
@@ -24,6 +28,17 @@ WEB_TIMEOUT_SECONDS = float(os.getenv("WEB_SEARCH_TIMEOUT_SECONDS", "10"))
 WEB_MAX_CONTENT_CHARS = int(os.getenv("WEB_SEARCH_MAX_CONTENT_CHARS", "12000"))
 WEB_SEARCH_MAX_RESULTS = int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5"))
 WEB_MAX_DOWNLOAD_BYTES = int(os.getenv("WEB_MAX_DOWNLOAD_BYTES", "1000000"))
+WEB_SYNC_LOCAL_ON_DIFFERENCE = os.getenv(
+    "WEB_SYNC_LOCAL_ON_DIFFERENCE", "true"
+).strip().lower() in {"1", "true", "yes", "on", "si", "sí"}
+WEB_SYNC_MAX_PAGES = int(os.getenv("WEB_SYNC_MAX_PAGES", "2"))
+WEB_SYNC_SOURCE_PATH = Path(
+    os.getenv("WEB_SYNC_SOURCE_PATH", "./knowledge_base/actualizaciones_web.md")
+)
+WEB_SYNC_STATE_PATH = Path(
+    os.getenv("WEB_SYNC_STATE_PATH", "./data/web_sync_state.json")
+)
+_SYNC_LOCK = threading.Lock()
 
 
 def _json(data: Any) -> str:
@@ -176,6 +191,150 @@ def _tavily_search(query: str, max_results: int) -> dict[str, Any]:
             }
         )
     return {"query": query, "provider": "tavily", "results": results}
+
+
+def _local_context(query: str, local_source: str, top_k: int) -> str:
+    if local_source == "complex":
+        from rag.pipeline import retrieve_context
+
+        return retrieve_context(query=query, top_k=top_k)
+    from rag.knowledge_pipeline import retrieve_knowledge_context
+
+    return retrieve_knowledge_context(query=query, top_k=top_k)
+
+
+def _normalize_for_comparison(value: str) -> str:
+    return " ".join((value or "").lower().split())
+
+
+def _sync_web_sources(query: str, pages: list[dict[str, Any]], local_context: str) -> bool:
+    """Persiste fuentes web distintas sin sobrescribir los manuales canónicos."""
+    if not WEB_SYNC_LOCAL_ON_DIFFERENCE or not pages:
+        return False
+    local_normalized = _normalize_for_comparison(local_context)
+    changed = False
+    with _SYNC_LOCK:
+        try:
+            state = json.loads(WEB_SYNC_STATE_PATH.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            state = {"sources": {}}
+        sources = state.setdefault("sources", {})
+        for page in pages:
+            content = str(page.get("content") or page.get("snippet") or "").strip()
+            url = str(page.get("url", "")).strip()
+            if not url or not content:
+                continue
+            normalized = _normalize_for_comparison(content)
+            if normalized and normalized in local_normalized:
+                continue
+            content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+            if sources.get(url, {}).get("content_hash") == content_hash:
+                continue
+            sources[url] = {
+                "title": str(page.get("title", "")),
+                "query": query,
+                "content": content,
+                "content_hash": content_hash,
+                "synced_at": datetime.now(timezone.utc).isoformat(),
+            }
+            changed = True
+        if not changed:
+            return False
+
+        WEB_SYNC_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        WEB_SYNC_SOURCE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        state_tmp = WEB_SYNC_STATE_PATH.with_suffix(".tmp")
+        source_tmp = WEB_SYNC_SOURCE_PATH.with_suffix(".tmp")
+        state_tmp.write_text(
+            json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        sections = [
+            "# Actualizaciones provenientes de fuentes web autorizadas",
+            "",
+            "Este archivo es generado automáticamente. Cada entrada conserva "
+            "su URL y fecha de sincronización.",
+            "",
+        ]
+        for url, item in sorted(sources.items()):
+            sections.extend(
+                [
+                    f"## {item.get('title') or url}",
+                    f"Fuente: {url}",
+                    f"Sincronizado: {item['synced_at']}",
+                    f"Consulta: {item['query']}",
+                    "",
+                    item["content"],
+                    "",
+                ]
+            )
+        source_tmp.write_text("\n".join(sections), encoding="utf-8")
+        os.replace(state_tmp, WEB_SYNC_STATE_PATH)
+        os.replace(source_tmp, WEB_SYNC_SOURCE_PATH)
+
+        from rag.knowledge_documents import (
+            get_knowledge_chunks,
+            load_knowledge_documents,
+        )
+        from rag.knowledge_vector_store import get_knowledge_vector_store
+
+        load_knowledge_documents.cache_clear()
+        get_knowledge_chunks.cache_clear()
+        get_knowledge_vector_store.cache_clear()
+        get_knowledge_vector_store()
+    return True
+
+
+@tool("primary_retrieve_context")
+def primary_retrieve_context(
+    query: str, local_source: str = "knowledge", top_k: int = 2
+) -> str:
+    """Usa Web como fuente principal y RAG como respaldo automático."""
+    clean_query = (query or "").strip()
+    source = "complex" if local_source == "complex" else "knowledge"
+    limit = max(1, min(top_k, WEB_SEARCH_MAX_RESULTS))
+    if not clean_query:
+        return _json({"error": "La consulta no puede estar vacía."})
+
+    if not retrieval_policy.WEB_SEARCH_ENABLED:
+        return _json(
+            {
+                "source_type": "rag_fallback",
+                "fallback_reason": "La búsqueda web está desactivada.",
+                "content": _local_context(clean_query, source, limit),
+            }
+        )
+
+    try:
+        search = _tavily_search(clean_query, limit)
+        results = search.get("results", [])
+        if not results:
+            raise RuntimeError("Tavily no devolvió resultados autorizados.")
+        pages: list[dict[str, Any]] = []
+        for result in results[: max(1, WEB_SYNC_MAX_PAGES)]:
+            try:
+                page = _fetch_page(str(result["url"]))
+                page["title"] = page.get("title") or result.get("title", "")
+                pages.append(page)
+            except (PermissionError, ValueError, RuntimeError):
+                pages.append(result)
+        local = _local_context(clean_query, source, limit)
+        synchronized = _sync_web_sources(clean_query, pages, local)
+        return _json(
+            {
+                "source_type": "web_primary",
+                "provider": "tavily",
+                "results": pages,
+                "local_source_updated": synchronized,
+            }
+        )
+    except (PermissionError, ValueError, RuntimeError, OSError) as exc:
+        return _json(
+            {
+                "source_type": "rag_fallback",
+                "fallback_reason": str(exc),
+                "content": _local_context(clean_query, source, limit),
+            }
+        )
 
 
 @tool("web_search_allowed")

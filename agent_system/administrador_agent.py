@@ -22,7 +22,11 @@ from agent_system.tools import (
     rag_retrieve_context,
     verificar_respuesta_con_fuentes,
 )
-from agent_system.web_tools import web_retrieve_allowed_url, web_search_allowed
+from agent_system.web_tools import (
+    primary_retrieve_context,
+    web_retrieve_allowed_url,
+    web_search_allowed,
+)
 
 logger = logging.getLogger("agente_corporativo.agent_system.administrador_agent")
 
@@ -36,6 +40,7 @@ ADMINISTRADOR_TOOLS = enabled_tools([
     consultar_politica_aplicable,
     combinar_politica_con_area_administrador,
     verificar_respuesta_con_fuentes,
+    primary_retrieve_context,
     web_search_allowed,
     web_retrieve_allowed_url,
 ])

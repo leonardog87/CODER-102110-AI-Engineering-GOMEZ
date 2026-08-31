@@ -28,7 +28,12 @@ WEB_SEARCH_ALLOWED_DOMAINS = tuple(
     if domain.strip()
 )
 
-WEB_TOOL_NAMES = frozenset({"web_search_allowed", "web_retrieve_allowed_url"})
+WEB_TOOL_NAMES = frozenset(
+    {"primary_retrieve_context", "web_search_allowed", "web_retrieve_allowed_url"}
+)
+DOCUMENT_RAG_TOOL_NAMES = frozenset(
+    {"rag_retrieve_context", "knowledge_retrieve_context"}
+)
 
 # Únicas herramientas autorizadas cuando la búsqueda web está desactivada.
 LOCAL_TOOL_NAMES = frozenset(
@@ -55,6 +60,9 @@ def enabled_tools(tools: Iterable[T]) -> List[T]:
     candidates = list(tools)
     allowed_names = set(LOCAL_TOOL_NAMES)
     if WEB_SEARCH_ENABLED:
+        # La herramienta compuesta conserva internamente el fallback RAG, pero
+        # evita que el modelo saltee por accidente la prioridad web.
+        allowed_names.difference_update(DOCUMENT_RAG_TOOL_NAMES)
         allowed_names.update(WEB_TOOL_NAMES)
     return [
         tool
@@ -76,11 +84,12 @@ LOCAL_ONLY_PROMPT = """
 WEB_OPTIONAL_PROMPT = """
 
 🌐 **POLÍTICA DE FUENTES:**
-- Consultá primero los manuales vectorizados y SQLite.
-- La búsqueda web opcional está habilitada, pero solo puede utilizarse después de agotar las fuentes locales y mediante una herramienta web registrada explícitamente.
-- `web_search_allowed` busca resultados y `web_retrieve_allowed_url` lee una página concreta; ambas están limitadas a los dominios autorizados.
+- Para consultas documentales, usá primero `primary_retrieve_context`: la Web es la fuente principal y RAG local es el respaldo automático si Tavily no está disponible, falla la conexión o no devuelve resultados.
+- No uses primero las herramientas RAG documentales cuando la búsqueda web esté habilitada.
+- `primary_retrieve_context` compara el resultado web con el contexto local y sincroniza en una fuente no parametrizada separada las versiones web nuevas o modificadas.
+- `web_search_allowed` y `web_retrieve_allowed_url` quedan disponibles para consultas complementarias y están limitadas a los dominios autorizados.
 - Usá exclusivamente los dominios incluidos en WEB_SEARCH_ALLOWED_DOMAINS. No intentes eludir esa restricción ni seguir enlaces hacia otros dominios.
-- Diferenciá con claridad cualquier fuente externa de las fuentes institucionales locales.
+- Indicá claramente si la respuesta provino de Web o del respaldo RAG local.
 """.strip()
 
 
