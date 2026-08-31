@@ -123,6 +123,13 @@ def build_chat_model():
     openai_api_key = os.getenv("OPENAI_API_KEY")
     openai_model = os.getenv("OPENAI_MODEL", "qwen/qwen2.5-coder-14b")
 
+    if openai_api_base and "router.huggingface.co" in openai_api_base:
+        openai_api_key = (
+            os.getenv("HUGGINGFACEHUB_API_TOKEN")
+            or os.getenv("HF_TOKEN")
+            or openai_api_key
+        )
+
     if openai_api_base:
         try:
             from langchain_openai import ChatOpenAI

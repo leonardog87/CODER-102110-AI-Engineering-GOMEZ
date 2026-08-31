@@ -1,128 +1,59 @@
-# Manual de Usuario: Portal de Servicios Digitales
+# Portal de Acceso para Empleados del Ministerio de Capital Humano
 
-**Versión 1.1**
+## ¿Qué es este portal y a quién está dirigida esta web?
 
----
+Esta web está dirigida a **empleados del Ministerio de Capital Humano**. El portal está diseñado especialmente para que, de acuerdo con el rol y los permisos asignados, puedan:
 
-## 1. ¿A quién está dirigida esta web?
+- Consultar tus **datos personales**.
+- Ver tu **documentación personal** (legajos, certificados, etc.).
+- Acceder a **información relacionada con tu trabajo** (recibos de sueldo, liquidaciones, etc.).
 
-Este portal está diseñado para:
-
-- **Personas mayores de 18 años** que necesiten utilizar servicios digitales.
-- **Apoderados legales** de menores o personas con discapacidad (deberán adjuntar el documento que acredite la representación).
-- **Personal autorizado** que gestione solicitudes del portal.
-
-> ⚠️ **No está habilitado** para menores de edad ni para personas sin documento de identidad vigente.
+Los visitantes que todavía no iniciaron sesión pueden consultar esta guía pública para conocer el portal, registrarse, ingresar o recuperar su contraseña. Las funciones laborales requieren autenticación y los permisos correspondientes.
 
 ---
 
-## 2. Cómo registrarse (primer ingreso)
+## ¿Qué puedo hacer aquí?
 
-Sigue estos pasos para crear tu cuenta:
+Desde la parte pública del portal podés:
 
-### Paso 1: Acceder al portal
-Ingresa a la página oficial:  
-➡️ [www.webejemplo.gob.ar/mi-cuenta](www.webejemplo.gob.ar/mi-cuenta)
+- Conocer para quién fue creado el sitio y qué servicios ofrece.
+- Crear tu usuario por primera vez.
+- Consultar cómo ingresar al portal.
+- Recuperar tu contraseña si la olvidaste.
+- Consultar indicaciones generales de acceso y seguridad.
 
-### Paso 2: Iniciar registro
-Haz clic en el botón **"Registrarse"** (arriba a la derecha).
-
-### Paso 3: Completar el formulario
-Completa los siguientes campos:
-
-- **Número de DNI / Pasaporte**
-- **Fecha de expedición** del documento
-- **Correo electrónico** personal (debe ser válido, recibirás un código)
-- **Teléfono celular** (para recibir alertas por SMS)
-- **Contraseña** (mínimo 8 caracteres, con mayúscula, número y un símbolo)
-
-### Paso 4: Aceptar términos
-Acepta los **términos y condiciones**.
-
-### Paso 5: Enviar solicitud
-Haz clic en **"Enviar"**.
-
-### Paso 6: Verificar correo
-Revisa tu correo: recibirás un **código de verificación de 6 dígitos**.
-
-### Paso 7: Validar código
-Ingresa ese código en la ventana que se abrió automáticamente.
-
-### ✅ ¡Listo!
-Ya tienes tu cuenta activa.
+Después de iniciar sesión, las opciones disponibles dependen del rol y de los permisos asignados a tu cuenta. Un visitante no puede consultar datos personales, laborales, salariales ni información de otros empleados.
 
 ---
 
-## 3. Cómo recuperar tu contraseña (si la olvidaste)
+## ¿Cómo ingreso al portal?
 
-Si no recuerdas tu clave, sigue este procedimiento:
-
-### Paso 1: Acceder a inicio de sesión
-Ve a [www.webejemplo.gob.ar/iniciar-sesion](www.webejemplo.gob.ar/iniciar-sesion)
-
-### Paso 2: Solicitar recuperación
-Debajo del campo de contraseña, haz clic en **"¿Olvidaste tu contraseña?"**.
-
-### Paso 3: Identificarse
-Ingresa tu **DNI** y el **correo electrónico** con el que te registraste.
-
-### Paso 4: Enviar solicitud
-Presiona **"Enviar enlace de recuperación"**.
-
-### Paso 5: Revisar correo
-Revisa tu bandeja de entrada (y también la carpeta de spam).  
-Recibirás un enlace que **expira en 15 minutos**.
-
-### Paso 6: Crear nueva contraseña
-Haz clic en ese enlace y escribe tu **nueva contraseña** (repítela para confirmar).
-
-### ✅ ¡Listo!
-Guarda los cambios y ya podrás iniciar sesión con tu nueva clave.
-
-> 📌 **Importante:** Si no recibes el correo, podés solicitar que te envíen el código por **SMS** al teléfono registrado (opción en la misma pantalla).
+Si ya tenés una cuenta, ingresá tu usuario y contraseña en la pantalla de inicio de sesión. Si no recordás tu clave, utilizá la opción **“¿Olvidé mi clave?”**. Si todavía no tenés una cuenta, seleccioná **“Registrarme”**.
 
 ---
 
-## 4. Teléfono de contacto por inconvenientes
+## ¿Cómo recuperar tu contraseña?
 
-Si experimentas problemas técnicos, errores en el sistema o no puedes completar tu registro, comunícate con el **Centro de Atención Digital**:
+Si olvidaste tu clave, sigue estos pasos:
 
-### 📞 Línea gratuita nacional
-**0-800-123-REGI (7344)**
-
-### 🕐 Horario de atención
-**Lunes a viernes** de **8:00 a 20:00 hs** (horario oficial).
-
-### ✉️ Correo alternativo
-**soporte@webejemplo.gob.ar**  
-(responden en **48 hs hábiles** - solo para seguimiento)
-
-> ⚠️ **Para emergencias fuera de horario** (ej. pérdida de documento), dirigite a la delegación más cercana o llamá al **911** (no a este número).
+1. Haz clic en el enlace **“¿Olvidé mi clave?”** (ubicado en la pantalla de inicio de sesión).
+2. Ingresa el **correo electrónico** con el que te registraste por primera vez.
+3. Revisá tu bandeja de entrada: recibirás un mensaje con **tus datos de acceso** (usuario y nueva contraseña o instrucciones para crearla).
 
 ---
 
-## 5. Recomendaciones finales
+## ¿Cómo crear un usuario por primera vez?
 
-### 🔒 Seguridad
-- **Cerrá siempre sesión** si usás una computadora pública.
-- **No compartas tu contraseña** con nadie.
+Si aún no tenés usuario, podés registrarte fácilmente:
 
-### 📱 Datos actualizados
-- Mantené actualizado tu **número de teléfono** y **correo** en *"Mis datos"* para poder recuperar tu cuenta sin demoras.
+1. Haz clic en el botón **“Registrarme”**.
+2. Completá el formulario con tus datos personales (nombre, DNI, correo, etc.).
+3. Una vez enviado el formulario, recibirás un **correo electrónico con tu usuario y contraseña** para ingresar al sistema.
 
----
-
-## 💬 Agradecimiento
-
-> ¡Gracias por utilizar nuestros servicios digitales!
-
----
-
-## 📅 Actualización del manual
-
-> Este manual se actualiza **cada 6 meses**.  
-> Revisá la fecha de vigencia en la página principal.
-
----
-
-**Fin del manual**
+> **Importante:** El registro en el portal permite acceder al sistema, pero **no garantiza por sí mismo permisos para consultar información sensible ni utilizar funciones internas**. El nivel de acceso depende del rol asignado, la autenticación y la autorización del sistema.
+>
+> En particular, **los empleados del Ministerio** pueden acceder a su documentación laboral y personal según su perfil autorizado, incluyendo su **historial de licencias**, **licencias tomadas**, **licencias disponibles** y el estado de cada solicitud. Sin embargo, **no pueden ver licencias, datos salariales ni información de otros empleados** sin la autorización correspondiente.
+>
+> Un usuario no autenticado o con rol limitado solo podrá consultar información pública o de uso general.
+>
+> Si sos empleado del Ministerio, después de registrarte e iniciar sesión podrás acceder únicamente a la documentación y las funciones habilitadas para tu perfil.

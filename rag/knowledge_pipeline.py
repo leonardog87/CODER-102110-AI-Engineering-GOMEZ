@@ -21,6 +21,22 @@ from rag.knowledge_vector_store import get_knowledge_vector_store
 from rag.ranking import rerank_documents
 
 
+def _expand_common_portal_queries(query: str) -> str:
+    """Refuerza preguntas frecuentes aun cuando contengan errores menores."""
+    normalized = query.lower()
+    asks_about_site = "web" in normalized or "portal" in normalized
+    asks_about_audience = "quien" in normalized or "quién" in normalized
+    if asks_about_site and asks_about_audience:
+        return f"{query} ¿A quién está dirigida o dedicada esta web?"
+    if any(term in normalized for term in ("contraseña", "contrasena", "clave")):
+        return f"{query} ¿Cómo recuperar mi contraseña o clave?"
+    if any(term in normalized for term in ("registro", "registrar", "cuenta")):
+        return f"{query} ¿Cómo crear un usuario y registrarme por primera vez?"
+    if any(term in normalized for term in ("puedo hacer", "para que sirve", "para qué sirve")):
+        return f"{query} ¿Qué puedo hacer aquí y qué funciones ofrece el portal?"
+    return query
+
+
 def retrieve_knowledge_documents(
     query: str,
     top_k: int = KNOWLEDGE_RETRIEVAL_TOP_K,
@@ -29,9 +45,10 @@ def retrieve_knowledge_documents(
     clean_query = (query or "").strip()
     if not clean_query:
         return []
+    retrieval_query = _expand_common_portal_queries(clean_query)
     candidate_k = max(KNOWLEDGE_RETRIEVAL_CANDIDATES, top_k)
     candidates = get_knowledge_vector_store().similarity_search_with_relevance_scores(
-        clean_query,
+        retrieval_query,
         k=candidate_k,
     )
     relevant = [
@@ -40,7 +57,7 @@ def retrieve_knowledge_documents(
         if float(score) >= KNOWLEDGE_RELEVANCE_THRESHOLD
     ]
     ranked = rerank_documents(
-        clean_query,
+        retrieval_query,
         [document for document, _score in relevant],
         [score for _document, score in relevant],
     )

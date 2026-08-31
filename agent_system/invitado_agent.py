@@ -8,19 +8,23 @@ from typing import Dict, List
 from langchain_core.messages import BaseMessage
 
 from agent_system.prompts import SYSTEM_PROMPT_INVITADO
+from agent_system.retrieval_policy import enabled_tools
 from agent_system.runtime import invoke_specialist_agent
 from agent_system.state import AgentState
 from agent_system.tools import (
     knowledge_retrieve_context,
     verificar_respuesta_con_fuentes,
 )
+from agent_system.web_tools import web_retrieve_allowed_url, web_search_allowed
 
 logger = logging.getLogger("agente_corporativo.agent_system.invitado_agent")
 
-INVITADO_TOOLS = [
+INVITADO_TOOLS = enabled_tools([
     knowledge_retrieve_context,
     verificar_respuesta_con_fuentes,
-]
+    web_search_allowed,
+    web_retrieve_allowed_url,
+])
 
 
 def agente_invitado(state: AgentState) -> Dict[str, List[BaseMessage]]:

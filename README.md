@@ -80,6 +80,23 @@ OPENAI_MODEL=...
 También puede utilizarse `HUGGINGFACEHUB_API_TOKEN` y `HF_MODEL_ID`. El `.env`
 real está excluido de Git y no debe contenerse en la imagen.
 
+La recuperación de información usa exclusivamente los manuales vectorizados y
+la base SQLite. La búsqueda web externa está desactivada por defecto:
+
+```env
+WEB_SEARCH_ENABLED=false
+WEB_SEARCH_PROVIDER=tavily
+WEB_SEARCH_API_KEY=
+WEB_SEARCH_ALLOWED_DOMAINS=argentina.gob.ar
+```
+
+La variable `WEB_SEARCH_ENABLED` queda disponible para una integración web
+opcional. Mientras sea `false`, las herramientas `web_search_allowed` y
+`web_retrieve_allowed_url` se filtran antes de exponerse al modelo. Para
+activarlas, configurá la clave del proveedor, uno o más dominios separados por
+comas y reiniciá la aplicación. Aun habilitadas, los agentes deben consultar
+primero los manuales vectorizados y SQLite.
+
 ## Ejecución rápida
 
 Aplicación local:
@@ -90,11 +107,28 @@ streamlit run app.py
 
 Abrí `http://localhost:8501`.
 
+API para un frontend C#/JavaScript:
+
+```powershell
+uvicorn api:app --reload --port 8000
+```
+
+La API queda disponible en `http://localhost:8000` y su contrato interactivo
+en `http://localhost:8000/docs`. `POST /api/chat` recibe `message`, `role` y,
+opcionalmente, `conversation_history`; `GET /api/history/{role}` recupera el
+historial persistido. Para un frontend remoto, configurá
+`API_CORS_ORIGINS` separado por `;` en `.env` (por ejemplo,
+`https://mi-frontend.example.com`). En producción, el rol debe obtenerse de la
+identidad autenticada del backend, no confiarse al JSON del navegador.
+
 Con Docker Compose:
 
 ```powershell
 docker compose up --build
 ```
+
+Compose publica Streamlit en `http://localhost:8501` y la API en
+`http://localhost:8000`.
 
 ## Ejemplos de uso
 

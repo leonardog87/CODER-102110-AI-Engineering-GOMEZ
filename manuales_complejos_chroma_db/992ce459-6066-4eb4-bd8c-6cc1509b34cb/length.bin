@@ -1,0 +1,13 @@
+## Problemas habituales
+
+- DNS incorrecto: corregir la configuración y volver a probar.
+- VPN sin acceso interno: revisar rutas, split tunneling y autenticación.
+- Timeouts: verificar jitter, congestión y balanceadores.
+- Puerto bloqueado: comprobar firewall y ACL de red.
+
+## Evidencias recomendadas
+
+- Configuración IP.
+- Resultados de ping y tracert.
+- Estado de la VPN.
+- Segmento afectado.��

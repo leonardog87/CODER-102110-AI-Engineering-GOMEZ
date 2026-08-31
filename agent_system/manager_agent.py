@@ -31,18 +31,21 @@ def agente_encargado(state: AgentState) -> dict:
     if rol == ROLE_EMPLEADO:
         agente: AgentName = AGENT_EMPLEADO
         motivo = (
-            "Rol Empleado: acceso a manuales simples, manuales complejos "
-            "y datos de empleados sin información salarial."
+            "Rol Empleado: acceso a manual_usuario.md, manual_empleados.md y "
+            "datos de empleados sin información salarial."
         )
     elif rol == ROLE_ADMINISTRADOR:
         agente = AGENT_ADMINISTRADOR
         motivo = (
-            "Rol Administrador: acceso a ambas bases documentales y acceso "
-            "completo a los datos de empleados."
+            "Rol Administrador: acceso a manual_usuario.md, manual_empleados.md y "
+            "al conjunto completo de datos de empleados."
         )
     else:
         agente = AGENT_INVITADO
-        motivo = "Rol Invitado: acceso exclusivo a manuales simples."
+        motivo = (
+            "Rol Invitado: acceso exclusivo a manual_usuario.md y "
+            "documentación pública del Ministerio."
+        )
 
     logger.info("Agente encargado designo %s para rol %s", agente, rol)
     return {
