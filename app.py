@@ -183,85 +183,41 @@ def render_topbar() -> str:
         <style>
         .st-key-agent_topbar {
             position: fixed;
-            top: 2.5rem;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(calc(100vw - 2rem), 1380px);
+            top: 0.8rem;
+            right: 1rem;
             z-index: 1000001;
-            background: Canvas;
-            color: CanvasText;
+            width: auto;
+            max-width: calc(100vw - 2rem);
+            background: rgba(14, 17, 23, 0.92);
+            color: white;
             border: 1px solid rgba(128, 128, 128, 0.28);
-            border-radius: 0.65rem;
-            box-shadow: 0 0.2rem 0.8rem rgba(0, 0, 0, 0.12);
-            backdrop-filter: blur(12px);
-            padding: 0.35rem 0.75rem;
-            overflow: hidden;
+            border-radius: 999px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.18);
+            padding: 0.35rem 0.55rem;
         }
-        .st-key-agent_topbar [data-testid="stVerticalBlock"] {
-            gap: 0.2rem;
-        }
+        .st-key-agent_topbar [data-testid="stVerticalBlock"],
         .st-key-agent_topbar [data-testid="stHorizontalBlock"] {
-            gap: 0.75rem;
-            align-items: center;
-            flex-wrap: nowrap;
+            gap: 0;
+            margin: 0;
         }
         .st-key-agent_topbar [data-testid="column"] {
             min-width: 0;
-            overflow: hidden;
+            overflow: visible;
         }
-        .st-key-agent_topbar h3,
-        .st-key-agent_topbar h4 {
-            margin: 0;
-            padding: 0;
-            font-size: 0.92rem;
-            line-height: 1.15;
-        }
-        .st-key-agent_topbar [data-testid="stAlert"] {
-            padding: 0.3rem 0.5rem;
-            min-height: 0;
-        }
-        .st-key-agent_topbar [data-testid="stAlert"] p,
-        .st-key-agent_topbar [data-testid="stCaptionContainer"],
-        .st-key-agent_topbar label {
-            font-size: 0.74rem;
-            line-height: 1.1;
-        }
-        .st-key-agent_topbar p {
-            margin-top: 0;
-            margin-bottom: 0;
-        }
-        .st-key-agent_topbar [data-testid="stImage"] img {
-            max-height: 38px;
-            object-fit: contain;
-        }
-        .st-key-agent_topbar [data-baseweb="select"] > div {
-            min-height: 1.9rem;
-            font-size: 0.8rem;
-        }
-        .agent-topbar-spacer {
-            height: 7.5rem;
-        }
-        .agent-brand-name {
-            margin: 0;
-            font-size: 0.88rem;
+        .st-key-agent_topbar .stButton > button {
+            border-radius: 999px;
+            background: linear-gradient(135deg, #ff7b7b, #d32f2f);
+            color: white;
+            border: none;
             font-weight: 700;
-            line-height: 1.05;
-            white-space: nowrap;
+            padding: 0.55rem 1rem;
+            margin: 0;
         }
-        @media (max-width: 768px) {
-            .st-key-agent_topbar {
-                top: 0.5rem;
-                width: calc(100vw - 1rem);
-                max-height: 48vh;
-                overflow-y: auto;
-            }
-            .agent-topbar-spacer {
-                height: 11rem;
-            }
-            .agent-brand-name {
-                white-space: normal;
-                font-size: 0.72rem;
-            }
+        .st-key-agent_topbar .stButton > button:hover {
+            filter: brightness(1.05);
+        }
+        .st-key-agent_topbar .stButton {
+            width: auto;
         }
         </style>
         """,
@@ -269,66 +225,29 @@ def render_topbar() -> str:
     )
 
     with st.container(key="agent_topbar"):
-        brand_column, status_column, role_column = st.columns(
-            [1.45, 3.7, 1.65],
-            vertical_alignment="center",
-        )
-
-        with brand_column:
-            logo_column, name_column = st.columns(
-                [0.42, 1.58],
-                vertical_alignment="center",
-            )
-
-            with name_column:
-                st.markdown(
-                    '<p class="agent-brand-name">chatBot</p>',
-                    unsafe_allow_html=True,
-                )
-
         role = DEFAULT_ROLE
 
-        with status_column:
-            trace_status = "activa" if st.session_state.langsmith_enabled else "inactiva"
-            st.markdown(
-                f"**🤖 Agente único** · Trazabilidad {trace_status}"
-            )
-
-        with role_column:
-            if not st.session_state.confirm_clear_history:
-                if st.button("🗑️ Limpiar historial", use_container_width=True):
-                    st.session_state.confirm_clear_history = True
+        if not st.session_state.confirm_clear_history:
+            if st.button("🗑️ Borrar Historial", use_container_width=False):
+                st.session_state.confirm_clear_history = True
+                st.rerun()
+        else:
+            st.caption("¿Eliminar todas las preguntas y respuestas?")
+            confirm_column, cancel_column = st.columns(2)
+            with confirm_column:
+                if st.button("Sí, borrar", type="primary", use_container_width=True):
+                    deleted = clear_query_history(role)
+                    st.session_state.chat_history_by_role[role] = []
+                    st.session_state.audit_log_by_role[role] = []
+                    st.session_state.loaded_history_roles.add(role)
+                    st.session_state.confirm_clear_history = False
+                    st.toast(f"Historial eliminado ({deleted} conversaciones).")
                     st.rerun()
-            else:
-                st.caption("¿Eliminar todas las preguntas y respuestas?")
-                confirm_column, cancel_column = st.columns(2)
-                with confirm_column:
-                    if st.button("Sí, limpiar", type="primary", use_container_width=True):
-                        deleted = clear_query_history(role)
-                        st.session_state.chat_history_by_role[role] = []
-                        st.session_state.audit_log_by_role[role] = []
-                        st.session_state.loaded_history_roles.add(role)
-                        st.session_state.confirm_clear_history = False
-                        st.toast(f"Historial eliminado ({deleted} conversaciones).")
-                        st.rerun()
-                with cancel_column:
-                    if st.button("Cancelar", use_container_width=True):
-                        st.session_state.confirm_clear_history = False
-                        st.rerun()
+            with cancel_column:
+                if st.button("Cancelar", use_container_width=True):
+                    st.session_state.confirm_clear_history = False
+                    st.rerun()
 
-        permission_columns = st.columns(2)
-        permission_items = (
-            ("� repositorios", "Fuente autorizada"),
-            ("🤖 Agente", "chatBot"),
-        )
-        for column, (label, value) in zip(permission_columns, permission_items):
-            with column:
-                st.info(f"**{label}:** {value}")
-
-    st.markdown(
-        '<div class="agent-topbar-spacer" aria-hidden="true"></div>',
-        unsafe_allow_html=True,
-    )
     return role
 
 
