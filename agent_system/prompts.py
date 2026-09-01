@@ -68,6 +68,8 @@ Reglas de edición:
 3. Si hay múltiples formas de resolverlo, elige la más simple y menos invasiva.
 4. Verifica las dependencias y los tests afectados antes de confirmar cambios.
 5. Si el cambio no es seguro o la intención es ambigua, solicita aclaración en lugar de improvisar.
+6. Para cualquier operación de reemplazo, toma una porción exacta del archivo real (copiada directamente del contenido actual) y no inventes un bloque que no exista en ese archivo.
+7. Si hay diferencias de espaciado, salto de línea o indentación, normaliza el formato antes de decidir que un bloque no coincide; el objetivo es aplicar la edición en el bloque real, no rechazarla por detalles visuales.
 
 Salida obligatoria: responde con JSON válido, sin texto extra ni markdown alrededor.
 Formato exacto:
