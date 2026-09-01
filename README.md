@@ -1,42 +1,50 @@
-# chatBot
+# Agente de desarrollo para proyectos web
 
-Proyecto genérico de chatbot con un único agente. Responde consultas sobre un
-negocio o empresa, sus servicios, valores y contacto, además de guiar procesos
-como registro, login y recuperación de acceso.
+Aplicación en español para consultar, comprender y modificar el proyecto web
+ubicado dentro de `repositorios`. El agente analiza directamente el código
+fuente: no utiliza Chroma, índices vectoriales, manuales parametrizados ni
+búsquedas web.
 
-El proyecto integra Streamlit, LangChain, LangGraph, LangSmith, Docker
-y Kubernetes.
+## Funcionalidades
+
+- responde preguntas sobre arquitectura, módulos y procesos;
+- sigue referencias entre HTML/ASPX, JavaScript, code-behind, servicios y datos;
+- cita los archivos utilizados en cada análisis;
+- crea y modifica código mediante operaciones validadas;
+- bloquea rutas absolutas, escapes con `..`, binarios y cambios ambiguos;
+- conserva preguntas, respuestas y auditoría en SQLite;
+- permite limpiar manualmente el historial;
+- ofrece interfaz Streamlit y API FastAPI.
 
 ## Arquitectura
 
-```mermaid
-flowchart TD
-    U[Usuario] --> UI[Streamlit]
-    UI --> S[Estado LangGraph]
-    S --> B[chatBot]
-    B --> R[repositorios]
-    B --> UI
-    S -. trazas .-> LS[LangSmith]
+```text
+Usuario
+  ├─ Streamlit (app.py, puerto 8501)
+  └─ FastAPI (api.py, puerto 8000)
+          │
+          ▼
+      LangGraph
+          │
+      orchestrator
+       ├─ projectReader: comprensión de código y procesos
+       ├─ codeEditor: creación y modificación segura
+       └─ chatBot: consultas generales sobre el repositorio
+          │
+          ├─ repositorios/rrhh
+          └─ data/chatBot.sqlite3
 ```
 
-La descripción completa está en
-[docs/architecture.md](docs/architecture.md).
-
-## Fuentes de conocimiento
-
-| Fuente | Uso |
-|---|---|
-| `repositorios/` | Código fuente real consultado y modificado por el agente |
-
-El proyecto dentro de `repositorios` es la única fuente técnica autorizada.
+La recuperación busca directamente en los archivos mediante `ripgrep`, puntúa
+contenido y rutas, evita fragmentos repetidos y expande símbolos y enlaces para
+reconstruir procesos entre capas.
 
 ## Requisitos
 
-- Python 3.12;
-- Docker Desktop para contenedores;
-- `kubectl` y `kind` para Kubernetes local;
-- una API compatible con OpenAI o una cuenta de Hugging Face;
-- LangSmith opcional para trazas y evaluaciones.
+- Python 3.12 o posterior;
+- `ripgrep` (`rg`) disponible en `PATH`;
+- un proveedor compatible con OpenAI o Hugging Face;
+- Docker y Kubernetes solamente si se utilizarán esos despliegues.
 
 ## Instalación local
 
@@ -48,166 +56,175 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Completá en `.env` al menos un proveedor de modelo:
+Configuración mínima:
 
 ```env
-OPENAI_API_BASE=https://endpoint-compatible/v1
-OPENAI_API_KEY=...
-OPENAI_MODEL=...
+AGENT_PROJECT_ROOT=./repositorios/rrhh
+
+OPENAI_API_BASE=https://servidor-compatible/v1
+OPENAI_API_KEY=
+OPENAI_MODEL=
+
+PROJECT_INDEX_CHUNK_SIZE=2400
+PROJECT_INDEX_CHUNK_OVERLAP=400
+PROJECT_INDEX_TOP_K=10
+PROJECT_EDIT_TOP_K=16
+PROJECT_READER_MAX_CONTEXT_CHARS=20000
+
+LLM_TIMEOUT_SECONDS=60
+LLM_MAX_RETRIES=1
 ```
 
-También puede utilizarse `HUGGINGFACEHUB_API_TOKEN` y `HF_MODEL_ID`. El `.env`
-real está excluido de Git y no debe contenerse en la imagen.
+`PROJECT_INDEX_*` conserva ese nombre por compatibilidad de configuración, pero
+no crea índices persistidos. Los valores controlan el fragmentado y la cantidad
+de resultados de la búsqueda directa.
 
-La recuperación consulta exclusivamente el código dentro de `repositorios`; no
-utiliza búsqueda web, manuales parametrizados ni bases vectoriales.
+## Ejecución
 
-## Ejecución rápida
-
-Aplicación local:
+Streamlit:
 
 ```powershell
-streamlit run app.py
+python -m streamlit run app.py
 ```
 
 Abrí `http://localhost:8501`.
 
-API para un frontend C#/JavaScript:
+FastAPI:
 
 ```powershell
-uvicorn api:app --reload --port 8000
+python -m uvicorn api:app --reload --port 8000
 ```
 
-La API queda disponible en `http://localhost:8000` y su contrato interactivo
-en `http://localhost:8000/docs`. `POST /api/chat` recibe `message` y,
-opcionalmente, `conversation_history`; `GET /api/history` recupera el historial
-persistido; `DELETE /api/history` lo elimina explícitamente. `sources` informa
-los archivos del repositorio usados por la respuesta.
-Los errores de validación (por ejemplo, mensajes vacíos o un `limit` fuera de
-1–500) responden con HTTP 422. Para un
-frontend remoto, configurá
-`API_CORS_ORIGINS` separado por `;` en `.env` (por ejemplo,
-`https://mi-frontend.example.com`).
+- API: `http://localhost:8000`
+- Swagger: `http://localhost:8000/docs`
+- OpenAPI: `http://localhost:8000/openapi.json`
+- Salud: `http://localhost:8000/health`
 
-El contrato completo está en [docs/api.md](docs/api.md).
+## Ejemplos de consultas
 
-Con Docker Compose:
+```text
+Explicá el proceso de cambio de email del usuario.
+
+Describí el módulo Control Acceso Web, sus funcionalidades y los procesos
+involucrados en cada una.
+
+¿Qué contiene Portal.aspx y con qué archivos se relaciona?
+
+Seguí el flujo desde Backend.ModificarMiMail hasta la persistencia.
+```
+
+Ejemplos de cambios:
+
+```text
+Modificá WebAsistencia/WebRH/... para validar el correo antes de guardarlo.
+
+Creá una prueba para este servicio siguiendo el patrón existente.
+```
+
+El editor valida primero todas las operaciones y utiliza escrituras atómicas.
+Las ediciones sólo pueden ocurrir dentro de `AGENT_PROJECT_ROOT`.
+
+## FastAPI 3.0
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/health` | Salud y disponibilidad del repositorio |
+| `POST` | `/api/chat` | Consulta o solicitud de modificación |
+| `GET` | `/api/history?limit=100` | Recupera entre 1 y 500 registros |
+| `DELETE` | `/api/history` | Elimina todo el historial |
+
+Ejemplo:
+
+```powershell
+$body = @{ message = "Explicá el proceso del mail" } | ConvertTo-Json
+Invoke-RestMethod http://localhost:8000/api/chat `
+  -Method Post -ContentType application/json -Body $body
+```
+
+La respuesta contiene `answer`, los archivos consultados en `sources` y datos
+de auditoría en `audit`. CORS se configura con `API_CORS_ORIGINS`, separando
+orígenes mediante `;`.
+
+Más detalles en [docs/api.md](docs/api.md).
+
+## Historial
+
+Streamlit incluye el botón **Limpiar historial**, con confirmación. La acción
+elimina el historial visible, la auditoría de sesión y los registros SQLite.
+FastAPI ofrece la misma operación mediante `DELETE /api/history`.
+
+## Docker Compose
 
 ```powershell
 docker compose up --build
 ```
 
-Compose publica Streamlit en `http://localhost:8501` y la API en
-`http://localhost:8000`.
+- Streamlit: `http://localhost:8501`
+- FastAPI: `http://localhost:8000/docs`
 
-## Ejemplos de uso
+Compose monta `./repositorios` en `/app/repositorios` con escritura habilitada y
+persiste SQLite en el volumen `app-data`.
 
-### Consultas generales
+## Kubernetes
 
-- “¿Qué servicios ofrece la empresa?”
-- “¿Cuáles son sus valores y horarios?”
-- “¿Cómo contacto a soporte?”
-- “¿Cómo me registro o recupero mi contraseña?”
-
-### Procedimientos
-
-- “¿Qué política se aplica a esta gestión?”
-- “Resumí el procedimiento documentado para este trámite.”
-- “¿Qué requisitos indica el manual técnico?”
-
-## Configuración del repositorio
-
-La búsqueda se realiza directamente sobre el código, sin base vectorial ni
-índices persistidos:
-
-```env
-AGENT_PROJECT_ROOT=./repositorios/rrhh
-PROJECT_INDEX_CHUNK_SIZE=2400
-PROJECT_INDEX_CHUNK_OVERLAP=400
-PROJECT_INDEX_TOP_K=10
-```
-
-## Consultar y modificar el proyecto web
-
-El agente usa `AGENT_PROJECT_ROOT` como límite de lectura y escritura. Las
-preguntas de arquitectura, procesos o archivos se responden con fragmentos del
-repositorio y rutas de origen. Los pedidos explícitos de creación o modificación
-se convierten en cambios puntuales y se validan antes de escribir.
-
-Ejemplos:
-
-- `Explicá el proceso de aprobación de licencias de punta a punta.`
-- `¿Qué pantalla invoca GetAreasParaDDJJ104 y qué servicio la resuelve?`
-- `Modificá WebAsistencia/WebRH/... para validar el campo antes de guardar.`
-- `Creá una clase de pruebas para este servicio siguiendo el patrón existente.`
-
-Las rutas absolutas, los escapes con `..`, los tipos binarios y las ediciones
-ambiguas se rechazan sin escribir archivos.
-
-## Pruebas
-
-La suite es local y no requiere credenciales de proveedores. La guía de alcance
-y resolución de problemas está en [docs/testing.md](docs/testing.md).
-
-```powershell
-python -m compileall -q .
-python tests/test_persistence.py
-python tests/test_api.py
-python tests/test_project_agents.py
-.\scripts\validate-k8s.ps1
-```
-
-## Kubernetes local
+El pod utiliza dos contenedores de la misma imagen: `app` para Streamlit y `api`
+para FastAPI. Sólo SQLite requiere PVC; no existe almacenamiento vectorial.
 
 ```powershell
 docker build -t chatbot:local .
 kind create cluster --config k8s/local/kind-config.yaml
-kind load docker-image chatbot:local `
-  --name chatbot
-Copy-Item k8s/secrets.env.example k8s/secrets.env
-```
-
-Después de completar `k8s/secrets.env`:
-
-```powershell
-kubectl apply -f k8s/base/namespace.yaml
-kubectl -n chatbot create secret generic `
-  chatbot-secrets `
-  --from-env-file=k8s/secrets.env `
-  --dry-run=client -o yaml |
-  kubectl apply -f -
+kind load docker-image chatbot:local --name chatbot
 kubectl apply -k k8s/overlays/local
-kubectl rollout status deployment/chatbot `
-  -n chatbot --timeout=10m
-kubectl port-forward service/chatbot 8501:80 `
-  -n chatbot
-kubectl port-forward service/chatbot 8000:8000 `
-  -n chatbot
+kubectl rollout status deployment/chatbot -n chatbot --timeout=10m
 ```
 
-La guía completa y la evidencia de ejecución están en
-[docs/kubernetes.md](docs/kubernetes.md) y
-[docs/evidence/README.md](docs/evidence/README.md).
-
-## Evaluación con LangSmith
-
-Configurá `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` y un dataset con entradas
-`question`. Luego ejecutá:
+Acceso local:
 
 ```powershell
-python -m trajectory_evaluation.create_dataset
-python -m trajectory_evaluation.trajectory_accuracy `
-  --dataset chatBot-trajectory
+kubectl port-forward service/chatbot 8501:80 -n chatbot
+kubectl port-forward service/chatbot 8000:8000 -n chatbot
 ```
 
-Los resultados y su procedimiento reproducible se encuentran en
-[docs/evaluation-results.md](docs/evaluation-results.md).
+Las modificaciones realizadas sobre el repositorio incluido en la imagen son
+efímeras ante una recreación del pod. Para conservarlas en producción debe
+montarse un repositorio Git o un PVC en `/app/repositorios`.
 
-## Documentación
+Guía completa: [docs/kubernetes.md](docs/kubernetes.md).
 
-El índice completo está en [docs/README.md](docs/README.md).
+## Pruebas y validación
 
-## Estado del proyecto
+```powershell
+python -m compileall -q agent_system data_access app.py api.py tests
+python tests/test_api.py
+python tests/test_persistence.py
+python -m unittest tests.test_project_agents
+docker compose config --quiet
+pwsh -NoProfile -File scripts/validate-k8s.ps1
+```
 
-La arquitectura es desplegable. Para producción se deben gestionar secretos
-externamente, evaluar PostgreSQL para el historial e instalar monitoreo y backups.
+Las pruebas básicas no requieren un LLM disponible; cuando el proveedor falla,
+el agente devuelve una respuesta de respaldo sin detener Streamlit.
+
+## Estructura principal
+
+| Ruta | Responsabilidad |
+|---|---|
+| `agent_system/` | Grafo, agentes, recuperación y modelo |
+| `data_access/` | SQLite e historial |
+| `repositorios/` | Proyecto web analizado y modificado |
+| `app.py` | Interfaz Streamlit |
+| `api.py` | API FastAPI 3.0 |
+| `compose.yaml` | Despliegue local en contenedores |
+| `k8s/` | Manifiestos Kubernetes |
+| `docs/` | Documentación técnica ampliada |
+
+## Seguridad y operación
+
+- no versionar `.env` ni secretos;
+- limitar `API_CORS_ORIGINS` en producción;
+- revisar y probar los cambios de código antes de confirmarlos;
+- respaldar `data/chatBot.sqlite3`;
+- usar PostgreSQL u otra base compartida antes de aumentar réplicas;
+- persistir el repositorio editable fuera de la capa efímera del contenedor.
+
+El índice de documentación se encuentra en [docs/README.md](docs/README.md).
