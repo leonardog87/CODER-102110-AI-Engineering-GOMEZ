@@ -97,7 +97,7 @@ def rebuild_knowledge_chromadb() -> bool:
         logger.info("Destino: %s", KNOWLEDGE_CHROMA_PERSIST_DIR)
         return True
     except Exception:
-        logger.exception("No se pudo recrear la base de conocimiento simple.")
+        logger.exception("No se pudo recrear la base vectorial de conocimiento.")
         return False
 
 

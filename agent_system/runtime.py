@@ -95,15 +95,19 @@ def invoke_specialist_agent(
         tool_calls = native_calls or _text_tool_calls(
             getattr(ai_message, "content", "")
         )
-        if (
-            round_index == 0
-            and not tool_calls
-            and "knowledge_retrieve_context" in tool_names
-        ):
+        required_retrieval_tool = next(
+            (
+                name
+                for name in ("primary_retrieve_context", "knowledge_retrieve_context")
+                if name in tool_names
+            ),
+            None,
+        )
+        if round_index == 0 and not tool_calls and required_retrieval_tool:
             user_text = _last_user_text(messages)
             if user_text:
                 tool_calls = [{
-                    "name": "knowledge_retrieve_context",
+                    "name": required_retrieval_tool,
                     "args": {"query": user_text, "top_k": 3},
                     "id": "required_business_context",
                 }]
@@ -139,7 +143,11 @@ def invoke_specialist_agent(
                 except Exception as exc:
                     result = safe_json({"error": f"Falló {name}: {exc}"})
             current_tool_messages.append(
-                ToolMessage(content=result, tool_call_id=call_id)
+                ToolMessage(
+                    content=result,
+                    tool_call_id=call_id,
+                    additional_kwargs={"tool_name": name},
+                )
             )
         generated.extend(current_tool_messages)
         conversation.extend(current_tool_messages)

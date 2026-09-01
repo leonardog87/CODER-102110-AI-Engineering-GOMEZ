@@ -17,10 +17,15 @@ Usuario -> Streamlit o FastAPI -> LangGraph -> chatBot
 
 1. La interfaz o `POST /api/chat` recibe la consulta.
 2. LangGraph ejecuta directamente el nodo `chatBot`.
-3. El runtime obliga a consultar `knowledge_retrieve_context`.
+3. El runtime obliga a consultar `knowledge_retrieve_context`; si se habilita
+   Web, utiliza `primary_retrieve_context`, que conserva el RAG como respaldo.
 4. El pipeline busca fragmentos en `knowledge_base/` y conserva sus fuentes.
 5. El modelo redacta una respuesta; las llamadas internas nunca se muestran.
 6. La interacción se guarda en `data/chatBot.sqlite3`.
+
+FastAPI mantiene endpoints síncronos para que el trabajo bloqueante de
+LangGraph y SQLite se ejecute en el pool de hilos del framework. Al apagar el
+servidor, su ciclo de vida cierra la conexión SQLite compartida.
 
 ## Recuperación
 

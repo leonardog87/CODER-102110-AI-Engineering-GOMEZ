@@ -37,7 +37,9 @@ jobs:
         run: |
           python -m compileall -q .
           python tests/test_persistence.py
+          python tests/test_retrieval_policy.py
           python tests/test_rag_retrieval.py
+          python tests/test_api.py
 
   publish:
     name: Publish production image

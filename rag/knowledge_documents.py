@@ -64,7 +64,7 @@ def _read_text(path: Path) -> List[Document]:
 
 @lru_cache(maxsize=1)
 def load_knowledge_documents() -> List[Document]:
-    """Carga las fuentes editables que alimentan el índice simple."""
+    """Carga las fuentes editables que alimentan el índice de conocimiento."""
     documents = [
         document for path in _source_files() for document in _read_text(path)
     ]

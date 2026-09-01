@@ -18,7 +18,6 @@ flowchart TD
     B --> UI
     S -. trazas .-> LS[LangSmith]
     KG --> C1[(Chroma)]
-    CR --> C2[(Chroma)]
 ```
 
 La descripción completa está en
@@ -101,7 +100,9 @@ uvicorn api:app --reload --port 8000
 La API queda disponible en `http://localhost:8000` y su contrato interactivo
 en `http://localhost:8000/docs`. `POST /api/chat` recibe `message` y,
 opcionalmente, `conversation_history`; `GET /api/history` recupera el historial
-persistido. La respuesta declara `sources: ["knowledge_base"]`. Para un
+persistido. `sources` informa `knowledge_base` o `web` según la fuente usada.
+Los errores de validación (por ejemplo, mensajes vacíos o un `limit` fuera de
+1–500) responden con HTTP 422. Para un
 frontend remoto, configurá
 `API_CORS_ORIGINS` separado por `;` en `.env` (por ejemplo,
 `https://mi-frontend.example.com`).
@@ -148,7 +149,9 @@ y resolución de problemas está en [docs/testing.md](docs/testing.md).
 ```powershell
 python -m compileall -q .
 python tests/test_persistence.py
+python tests/test_retrieval_policy.py
 python tests/test_rag_retrieval.py
+python tests/test_api.py
 .\scripts\validate-k8s.ps1
 ```
 

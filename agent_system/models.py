@@ -5,10 +5,8 @@ from __future__ import annotations
 import logging
 import json
 import os
-import unicodedata
-from functools import lru_cache, wraps
-from typing import Any, Dict, List, Optional
-from contextlib import contextmanager
+from functools import lru_cache
+from typing import Any, Dict, List
 
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage
@@ -21,83 +19,6 @@ _token = os.getenv("HUGGINGFACEHUB_API_TOKEN") or os.getenv("HF_TOKEN")
 if _token:
     os.environ["HF_TOKEN"] = _token
     os.environ["HUGGINGFACEHUB_API_TOKEN"] = _token
-
-
-def get_langsmith_tracer():
-    """Obtiene un tracer de LangSmith configurado con el proyecto actual."""
-    try:
-        from langchain.callbacks.tracers import LangChainTracer
-        from langsmith import Client
-    except ImportError:
-        logger.warning("LangChainTracer o Client no están disponibles")
-        return None
-        
-    langsmith_api_key: str = os.getenv("LANGSMITH_API_KEY", "")
-    langsmith_project: str = os.getenv("LANGSMITH_PROJECT", "proyecto_coder")
-    langsmith_tracing: str = os.getenv("LANGSMITH_TRACING", "true")
-    
-    if langsmith_tracing.lower() != "true":
-        logger.info("LangSmith tracing está desactivado")
-        return None
-        
-    if not langsmith_api_key:
-        logger.warning("No se encontró LANGSMITH_API_KEY")
-        return None
-        
-    try:
-        client = Client(api_key=langsmith_api_key)
-        tracer = LangChainTracer(
-            project_name=langsmith_project,
-            client=client
-        )
-        logger.info(f"Tracer de LangSmith creado para proyecto: {langsmith_project}")
-        return tracer
-    except Exception as e:
-        logger.warning(f"No se pudo crear tracer de LangSmith: {e}")
-        return None
-
-
-@contextmanager
-def langsmith_tracing(project_name: Optional[str] = None):
-    """Context manager para habilitar tracing de LangSmith."""
-    tracer = get_langsmith_tracer()
-    if tracer:
-        try:
-            # Intentar usar el tracer directamente
-            from langchain.callbacks.manager import CallbackManager
-            # Creamos un manager con el tracer
-            manager = CallbackManager([tracer])
-            # Lo pasamos como contexto
-            yield manager
-        except Exception as e:
-            logger.warning(f"Error en LangSmith tracing: {e}")
-            yield None
-    else:
-        logger.info("LangSmith no disponible, ejecutando sin tracing")
-        yield None
-
-
-def with_langsmith_tracing(func):
-    """Decorador para ejecutar funciones con tracing de LangSmith."""
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        tracer = get_langsmith_tracer()
-        if tracer:
-            # Si la función acepta config, agregamos el callback
-            if "config" in kwargs:
-                kwargs["config"] = kwargs.get("config", {})
-                if "callbacks" not in kwargs["config"]:
-                    kwargs["config"]["callbacks"] = []
-                kwargs["config"]["callbacks"].append(tracer)
-            else:
-                # Si no, intentamos con run_manager
-                try:
-                    from langchain.callbacks.manager import CallbackManager
-                    kwargs["callback_manager"] = CallbackManager([tracer])
-                except ImportError:
-                    pass
-        return func(*args, **kwargs)
-    return wrapper
 
 
 @lru_cache(maxsize=1)
@@ -203,12 +124,6 @@ class OfflineFallbackChatModel:
         """Get available tool names."""
         return {str(getattr(tool, "name", "")) for tool in self.tools}
 
-    @staticmethod
-    def _normalize(text: str) -> str:
-        """Normalize text for better matching."""
-        normalized = unicodedata.normalize("NFKD", text.lower())
-        return "".join(char for char in normalized if not unicodedata.combining(char))
-
     def invoke(self, messages: List[BaseMessage]) -> AIMessage:
         """Invoke the fallback model with messages."""
         if any(getattr(message, "type", None) == "tool" for message in messages):
@@ -220,11 +135,17 @@ class OfflineFallbackChatModel:
                 user_text = str(getattr(message, "content", "") or "")
                 break
 
-        normalized_user_text = self._normalize(user_text)
         tool_names = self._available_tool_names()
 
-        retrieval_tool = "knowledge_retrieve_context"
-        if retrieval_tool in tool_names and user_text:
+        retrieval_tool = next(
+            (
+                name
+                for name in ("primary_retrieve_context", "knowledge_retrieve_context")
+                if name in tool_names
+            ),
+            None,
+        )
+        if retrieval_tool and user_text:
             return AIMessage(
                 content=(
                     f'{{"name": "{retrieval_tool}", '

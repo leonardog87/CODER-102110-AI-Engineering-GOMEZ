@@ -27,7 +27,7 @@ RUN mkdir -p \
 
 USER app
 
-EXPOSE 8501
+EXPOSE 8501 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3)"]

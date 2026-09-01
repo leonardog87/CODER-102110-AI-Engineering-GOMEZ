@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Literal
+from contextlib import asynccontextmanager
+from typing import Annotated, Any, Dict, List, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from pydantic import BaseModel, Field
 
 from agent_system import app_graph
+from data_access.database import close_connection
 from data_access.query_history import load_query_history, save_query_record
 
 
@@ -28,6 +30,12 @@ class ChatResponse(BaseModel):
     answer: str
     sources: List[str]
     audit: Dict[str, Any]
+
+
+class HealthResponse(BaseModel):
+    status: Literal["ok"]
+    agent: str
+    knowledge_source: str
 
 
 def _messages_for_graph(request: ChatRequest) -> List[BaseMessage]:
@@ -53,6 +61,7 @@ def _tool_traces(messages: List[BaseMessage]) -> List[Dict[str, Any]]:
             traces.append(
                 {
                     "tool_call_id": getattr(message, "tool_call_id", None),
+                    "tool_name": message.additional_kwargs.get("tool_name"),
                     "content": message.content,
                 }
             )
@@ -64,10 +73,34 @@ def _allowed_origins() -> List[str]:
     return [origin.strip() for origin in value.replace(",", ";").split(";") if origin.strip()]
 
 
+def _sources_from_traces(traces: List[Dict[str, Any]]) -> List[str]:
+    """Informa las fuentes efectivamente usadas sin exponer detalles internos."""
+    uses_web = any(
+        trace.get("tool_name") in {"web_search_allowed", "web_retrieve_allowed_url"}
+        or '"source_type": "web_primary"' in str(trace.get("content", ""))
+        for trace in traces
+    )
+    if uses_web:
+        return ["web"]
+    return ["knowledge_base"]
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Libera la conexión SQLite compartida al apagar el servidor."""
+    yield
+    close_connection()
+
+
 app = FastAPI(
     title="chatBot API",
-    description="API del agente único respaldado exclusivamente por knowledge_base.",
-    version="2.0.0",
+    description="API del agente único con RAG local y Web autorizada opcional.",
+    version="2.1.0",
+    lifespan=lifespan,
+    openapi_tags=[
+        {"name": "system", "description": "Estado del servicio."},
+        {"name": "chat", "description": "Conversación e historial."},
+    ],
 )
 app.add_middleware(
     CORSMiddleware,
@@ -78,12 +111,16 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
-def health() -> Dict[str, str]:
-    return {"status": "ok", "agent": "chatBot", "knowledge_source": "knowledge_base"}
+@app.get("/health", response_model=HealthResponse, tags=["system"])
+def health() -> HealthResponse:
+    return HealthResponse(
+        status="ok",
+        agent="chatBot",
+        knowledge_source="knowledge_base",
+    )
 
 
-@app.post("/api/chat", response_model=ChatResponse)
+@app.post("/api/chat", response_model=ChatResponse, tags=["chat"])
 def chat(request: ChatRequest) -> ChatResponse:
     try:
         result = app_graph.invoke({"messages": _messages_for_graph(request)})
@@ -118,9 +155,21 @@ def chat(request: ChatRequest) -> ChatResponse:
     except Exception as exc:
         raise HTTPException(status_code=500, detail="No se pudo guardar la auditoría.") from exc
 
-    return ChatResponse(answer=answer, sources=["knowledge_base"], audit=audit)
+    return ChatResponse(
+        answer=answer,
+        sources=_sources_from_traces(traces),
+        audit=audit,
+    )
 
 
-@app.get("/api/history")
-def history(limit: int = 100) -> List[Dict[str, Any]]:
-    return load_query_history("General", limit=max(1, min(limit, 500)))
+@app.get("/api/history", tags=["chat"])
+def history(
+    limit: Annotated[int, Query(ge=1, le=500, description="Cantidad de registros.")] = 100,
+) -> List[Dict[str, Any]]:
+    try:
+        return load_query_history("General", limit=limit)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo recuperar el historial.",
+        ) from exc

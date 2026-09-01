@@ -47,8 +47,14 @@ jobs:
       - name: Test chat history persistence
         run: python tests/test_persistence.py
 
+      - name: Test retrieval policy
+        run: python tests/test_retrieval_policy.py
+
       - name: Test RAG retrieval relevance
         run: python tests/test_rag_retrieval.py
+
+      - name: Test FastAPI contract
+        run: python tests/test_api.py
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4

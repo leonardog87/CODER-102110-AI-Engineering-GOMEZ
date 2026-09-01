@@ -79,7 +79,7 @@ def retrieve_knowledge_documents(
     query: str,
     top_k: int = KNOWLEDGE_RETRIEVAL_TOP_K,
 ) -> List[Document]:
-    """Recupera y reordena fragmentos relevantes de las fuentes simples."""
+    """Recupera y reordena fragmentos relevantes de knowledge_base."""
     clean_query = (query or "").strip()
     if not clean_query:
         return []
