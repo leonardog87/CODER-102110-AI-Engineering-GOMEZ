@@ -183,7 +183,7 @@ def render_topbar() -> str:
         <style>
         .st-key-agent_topbar {
             position: fixed;
-            top: 0.8rem;
+            top: 3.8rem;
             right: 1rem;
             z-index: 1000001;
             width: auto;
