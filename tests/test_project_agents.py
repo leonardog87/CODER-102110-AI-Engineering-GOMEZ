@@ -263,6 +263,30 @@ class OrchestratorSelectionTests(unittest.TestCase):
             self.assertIn('btn-test', content)
             self.assertIn('TEST', content)
 
+    def test_natural_prompt_creates_generic_custom_button(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            path = root / "repositorios" / "rrhh" / "WebAsistencia" / "WebRH" / "Login.aspx"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                '<div style="position: relative; display: inline-block; width: 260px;">\n'
+                '  <button id="fat-btn" data-loading-text="Iniciando..." class="btn btn-primary">\n'
+                '    Iniciar Sesión\n'
+                '  </button>\n'
+                '</div>\n',
+                encoding="utf-8",
+            )
+
+            op = _natural_create_button_operation('crea el boton ayuda dentro de login.aspx', root)
+            self.assertEqual(op["action"], "replace")
+            self.assertIn('btn-ayuda', op["new_text"])
+            self.assertIn('Ayuda', op["new_text"])
+            target, content, existed = _prepare_operation(root, op)
+            self.assertTrue(existed)
+            self.assertEqual(target.as_posix(), path.as_posix())
+            self.assertIn('btn-ayuda', content)
+            self.assertIn('Ayuda', content)
+
     def test_prepare_operation_resolves_real_login_when_plan_uses_nonexistent_path(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

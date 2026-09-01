@@ -244,8 +244,57 @@ def _prepare_operation(root: Path, operation: Dict[str, Any]) -> tuple[Path, str
     raise ValueError(f"acción de edición no permitida: {action or '(vacía)'}")
 
 
+def _extract_element_metadata(request: str) -> Dict[str, str]:
+    prompt = (request or "").strip()
+    lower = prompt.lower()
+
+    if "link" in lower or "enlace" in lower or "href" in lower:
+        element_type = "link"
+    elif "script" in lower or "codigo" in lower or "code" in lower or "linea" in lower or "línea" in lower:
+        element_type = "code"
+    else:
+        element_type = "button"
+
+    patterns = [
+        r"(?:bot(?:o|ó)n|button|link|enlace|script|codigo|código|línea|linea)\s+(?:llamado|llamada|denominado|con\s+nombre|de\s+nombre|de\s+)?([A-Za-z0-9_áéíóúÁÉÍÓÚñÑ\- ]{2,40})",
+        r"(?:bot(?:o|ó)n|button|link|enlace|script|codigo|código|línea|linea)\s+(?:de\s+)?([A-Za-z0-9_áéíóúÁÉÍÓÚñÑ\- ]{2,40})",
+        r"(?:crear|agregar|insertar|añadir|poner|agrega|crea)\s+(?:un|una)?\s*(?:bot(?:o|ó)n|button|link|enlace|script|codigo|código|línea|linea)?\s*(?:llamado|llamada|de\s+nombre|de\s+)?([A-Za-z0-9_áéíóúÁÉÍÓÚñÑ\- ]{2,40})",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, prompt, flags=re.IGNORECASE)
+        if match:
+            label = re.sub(r"\s+", " ", match.group(1)).strip()
+            if label:
+                return {"type": element_type, "label": label}
+
+    if "test" in lower:
+        return {"type": element_type, "label": "TEST"}
+
+    return {"type": element_type, "label": "Elemento"}
+
+
+def _render_insertion_for_login(element_type: str, label: str) -> str:
+    safe_name = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-") or "elemento"
+    if element_type == "link":
+        return (
+            f'\n                    <a id="lnk-{safe_name}" style="margin-left: 10px; cursor: pointer;">{label}</a>\n'
+        )
+    if element_type == "code":
+        return (
+            f'\n                    <script id="script-{safe_name}" type="text/javascript">\n'
+            f'                        // {label}\n'
+            f'                    </script>\n'
+        )
+    return (
+        f'\n                    <button id="btn-{safe_name}" type="button" class="btn btn-primary" style="margin-bottom: 15px; margin-left: 10px;">\n'
+        f'                        {label}\n'
+        f'                    </button>\n'
+    )
+
+
 def _natural_create_button_operation(request: str, root: Path) -> Dict[str, Any]:
-    """Genera una operación determinista para insertar un botón TEST desde un prompt normal."""
+    """Genera una operación determinista para insertar un elemento desde un prompt normal."""
     prompt = (request or "").strip()
     lower_prompt = prompt.lower()
 
@@ -261,6 +310,14 @@ def _natural_create_button_operation(request: str, root: Path) -> Dict[str, Any]
         current = target.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         current = target.read_text(encoding="latin-1")
+
+    metadata = _extract_element_metadata(prompt)
+    label = metadata["label"]
+    element_type = metadata["type"]
+    insertion = _render_insertion_for_login(element_type, label)
+
+    if 'btn-' in current.lower() or 'lnk-' in current.lower() or 'script-' in current.lower():
+        pass
 
     anchor_patterns = [
         r'<button\b[^>]*id\s*=\s*["\']fat-btn["\'][^>]*>.*?</button>',
@@ -269,35 +326,10 @@ def _natural_create_button_operation(request: str, root: Path) -> Dict[str, Any]
         r'<input\s+[^>]*id\s*=\s*["\']password["\'][^>]*>',
         r'<div\s+style\s*=\s*["\']position:\s*relative;\s*display:\s*inline-block;\s*width:\s*260px;["\']>.*?</div>',
     ]
-    exact_button_match = re.search(r'<button\b[^>]*id\s*=\s*["\']fat-btn["\'][^>]*>.*?</button>', current, flags=re.IGNORECASE | re.DOTALL)
-    if exact_button_match and 'btn-test' not in current.lower():
-        anchor = exact_button_match.group(0)
-        insertion = (
-            '\n                    <button id="btn-test" type="button" class="btn btn-primary" style="margin-bottom: 15px; margin-left: 10px;">\n'
-            '                        TEST\n'
-            '                    </button>\n'
-        )
-        old_text = anchor
-        new_text = anchor + insertion
-        return {
-            "action": "replace",
-            "path": target.relative_to(root).as_posix(),
-            "old_text": old_text,
-            "new_text": new_text,
-            "description": "Insertar un botón TEST junto al botón principal del login en la ubicación correcta."
-        }
-
     for pattern in anchor_patterns:
         match = re.search(pattern, current, flags=re.IGNORECASE | re.DOTALL)
         if match:
             anchor = match.group(0)
-            insertion = (
-                '\n                    <button id="btn-test" type="button" class="btn btn-primary" style="margin-bottom: 15px; margin-left: 10px;">\n'
-                '                        TEST\n'
-                '                    </button>\n'
-            )
-            if 'btn-test' in current:
-                raise ValueError("Ya existe un botón TEST en el archivo Login.aspx.")
             old_text = anchor
             new_text = anchor + insertion if 'fat-btn' in anchor.lower() else anchor.replace('</div>', insertion + '</div>', 1)
             return {
@@ -305,14 +337,9 @@ def _natural_create_button_operation(request: str, root: Path) -> Dict[str, Any]
                 "path": target.relative_to(root).as_posix(),
                 "old_text": old_text,
                 "new_text": new_text,
-                "description": "Insertar un botón TEST junto al botón principal del login en la ubicación correcta."
+                "description": f"Insertar un {element_type} {label} junto al botón principal del login."
             }
 
-    insertion = (
-        '\n                    <button id="btn-test" type="button" class="btn btn-primary" style="margin-bottom: 15px; margin-left: 10px;">\n'
-        '                        TEST\n'
-        '                    </button>\n'
-    )
     if '<form id="formLogin"' in current:
         fallback_anchor = '<form id="formLogin" runat="server">'
         return {
@@ -320,14 +347,14 @@ def _natural_create_button_operation(request: str, root: Path) -> Dict[str, Any]
             "path": target.relative_to(root).as_posix(),
             "old_text": fallback_anchor,
             "new_text": fallback_anchor + insertion,
-            "description": "Añadir el botón TEST al inicio del formulario si no hay un ancla de login clara."
+            "description": f"Añadir el {element_type} {label} al inicio del formulario."
         }
 
-    raise ValueError("No fue posible ubicar un punto seguro para insertar el botón TEST en Login.aspx.")
+    raise ValueError(f"No fue posible ubicar un punto seguro para insertar el {element_type} {label} en Login.aspx.")
 
 
 def _natural_delete_button_operation(request: str, root: Path) -> Dict[str, Any]:
-    """Genera una operación determinista para eliminar un botón TEST desde un prompt normal."""
+    """Genera una operación determinista para eliminar un elemento desde un prompt normal."""
     prompt = (request or "").strip()
     lower_prompt = prompt.lower()
 
@@ -344,24 +371,55 @@ def _natural_delete_button_operation(request: str, root: Path) -> Dict[str, Any]
     except UnicodeDecodeError:
         current = target.read_text(encoding="latin-1")
 
-    patterns = [
-        r'<button\b[^>]*\bid\s*=\s*["\']TEST["\'][^>]*>.*?</button>',
-        r'<button\b[^>]*>\s*TEST\s*</button>',
-        r'<button\b[^>]*\bvalue\s*=\s*["\']TEST["\'][^>]*>.*?</button>',
+    metadata = _extract_element_metadata(prompt)
+    label = metadata["label"]
+    element_type = metadata["type"]
+    tag_patterns = [
+        r'<button\b[^>]*\b(?:id|value)\s*=\s*["\']([^"\']+)["\'][^>]*>.*?</button>',
+        r'<a\b[^>]*\b(?:id|class)\s*=\s*["\']([^"\']+)["\'][^>]*>.*?</a>',
+        r'<script\b[^>]*\b(?:id|class)\s*=\s*["\']([^"\']+)["\'][^>]*>.*?</script>',
     ]
-    for pattern in patterns:
+    for pattern in tag_patterns:
+        matches = re.finditer(pattern, current, flags=re.IGNORECASE | re.DOTALL)
+        for match in matches:
+            segment = match.group(0)
+            if label.lower() in segment.lower() or any(token in segment.lower() for token in ["btn-", "lnk-", "script-"]):
+                return {
+                    "action": "delete",
+                    "path": target.relative_to(root).as_posix(),
+                    "old_text": segment,
+                    "new_text": "",
+                    "description": f"Eliminar el {element_type} {label}."
+                }
+
+    text_patterns = [
+        r'<button\b[^>]*>\s*' + re.escape(label) + r'\s*</button>',
+        r'<a\b[^>]*>\s*' + re.escape(label) + r'\s*</a>',
+        r'<script\b[^>]*>.*?' + re.escape(label) + r'.*?</script>',
+    ]
+    for pattern in text_patterns:
         match = re.search(pattern, current, flags=re.IGNORECASE | re.DOTALL)
         if match:
-            old_text = match.group(0)
             return {
                 "action": "delete",
                 "path": target.relative_to(root).as_posix(),
-                "old_text": old_text,
+                "old_text": match.group(0),
                 "new_text": "",
-                "description": "Eliminar el botón TEST identificado por id o texto visible."
+                "description": f"Eliminar el {element_type} {label}."
             }
 
-    raise ValueError("No se encontró el botón TEST en el archivo Login.aspx.")
+    raise ValueError(f"No se encontró el {element_type} {label} en Login.aspx.")
+
+
+def _is_generic_login_element_request(request: str) -> bool:
+    lower = (request or "").lower()
+    if "login" not in lower:
+        return False
+    if not re.search(r"(crea|crear|agrega|agregar|insert|insertar|añad|añadir|pone|poner|borr|borra|elimin|elimina|quita|quitar|saca|sacar)", lower):
+        return False
+    if re.search(r"(boton|botón|button|link|enlace|script|codigo|código|linea|línea)", lower):
+        return True
+    return False
 
 
 def codeEditor(state: AgentState) -> Dict[str, Any]:
@@ -379,11 +437,13 @@ def codeEditor(state: AgentState) -> Dict[str, Any]:
     plan: Dict[str, Any] | None = None
     lower = request.lower()
 
-    if "login" in lower and "test" in lower and re.search(r"(crea|agreg|insert|añad|pone|add|agrega)", lower):
+    if _is_generic_login_element_request(request):
         try:
-            plan = {"summary": "Crear botón TEST", "operations": [_natural_create_button_operation(request, root)]}
+            is_create = re.search(r"(crea|crear|agrega|agregar|insert|insertar|añad|añadir|pone|poner)", lower) is not None
+            operation = _natural_create_button_operation(request, root) if is_create else _natural_delete_button_operation(request, root)
+            plan = {"summary": "Edición segura de Login.aspx", "operations": [operation]}
         except Exception as fallback_exc:
-            logger.exception("Fallback natural de creación para login/test falló")
+            logger.exception("Fallback natural genérico para login falló")
             answer = f"No realicé cambios porque no pude obtener un plan de edición seguro: {fallback_exc}."
             return {
                 "messages": [AIMessage(content=answer)],
