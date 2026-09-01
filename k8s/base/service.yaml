@@ -14,3 +14,7 @@ spec:
       port: 80
       targetPort: http
       protocol: TCP
+    - name: api
+      port: 8000
+      targetPort: api
+      protocol: TCP

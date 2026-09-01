@@ -11,7 +11,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN groupadd --system app && useradd --system --gid app --home-dir /app app
+RUN groupadd --system --gid 10001 app && \
+    useradd --system --uid 10001 --gid app --home-dir /app app
 
 COPY requirements.txt .
 RUN python -m pip install -r requirements.txt
@@ -19,11 +20,9 @@ RUN python -m pip install -r requirements.txt
 COPY --chown=app:app . .
 
 RUN mkdir -p \
-      /app/data \
-      /app/knowledge_base_chroma_db && \
+      /app/data && \
     chown -R app:app \
-      /app/data \
-      /app/knowledge_base_chroma_db
+      /app/data
 
 USER app
 

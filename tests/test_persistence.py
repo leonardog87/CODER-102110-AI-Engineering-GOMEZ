@@ -14,7 +14,7 @@ test_db = Path(tempfile.gettempdir()) / "chatbot-history-test.sqlite3"
 os.environ["CHATBOT_DB"] = str(test_db)
 
 from data_access.database import close_connection  # noqa: E402
-from data_access.query_history import load_query_history, save_query_record  # noqa: E402
+from data_access.query_history import clear_query_history, load_query_history, save_query_record  # noqa: E402
 
 
 def main() -> int:
@@ -31,6 +31,8 @@ def main() -> int:
         rows = load_query_history("General")
         assert rows[-1]["id"] == record_id
         assert rows[-1]["agent_name"] == "chatBot"
+        assert clear_query_history("General") >= 1
+        assert load_query_history("General") == []
         print("[OK] Historial único persistido y recuperado")
         return 0
     finally:

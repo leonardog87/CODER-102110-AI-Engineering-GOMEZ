@@ -11,7 +11,16 @@ from typing import Any, Dict, List
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
 
 from agent_system.models import build_chat_model, fallback_chat_model
-from agent_system.tools import safe_json
+
+
+def safe_json(data: Any) -> str:
+    """Serializa resultados de herramientas sin perder caracteres en español."""
+    try:
+        import json
+        return json.dumps(data, ensure_ascii=False, default=str)
+    except Exception:
+        import json
+        return json.dumps({"error": "No se pudo serializar el resultado."}, ensure_ascii=False)
 
 logger = logging.getLogger("chatBot.agent_system.runtime")
 
@@ -20,7 +29,7 @@ def _invoke(model: Any, messages: List[BaseMessage], tools: List[Any]) -> AIMess
     try:
         return model.invoke(messages)
     except Exception as exc:
-        logger.warning("Proveedor LLM no disponible; usando respaldo: %s", exc)
+        logger.warning("La solicitud al LLM falló; usando respaldo: %s", exc)
         fallback = fallback_chat_model().bind_tools(tools)
         return fallback.invoke(messages)
 
@@ -95,22 +104,15 @@ def invoke_specialist_agent(
         tool_calls = native_calls or _text_tool_calls(
             getattr(ai_message, "content", "")
         )
-        required_retrieval_tool = next(
-            (
-                name
-                for name in ("primary_retrieve_context", "knowledge_retrieve_context")
-                if name in tool_names
-            ),
-            None,
+        required_retrieval_tool = None
+        user_text = _last_user_text(messages)
+        asks_project_context = bool(
+            user_text
+            and re.search(
+                r"(codigo|código|proyecto|arquitectura|estructura|funcion|función|clase|api.py|app.py|repo|repositorio|readme|backend|frontend|streamlit|langgraph|dependencia)",
+                user_text.lower(),
+            )
         )
-        if round_index == 0 and not tool_calls and required_retrieval_tool:
-            user_text = _last_user_text(messages)
-            if user_text:
-                tool_calls = [{
-                    "name": required_retrieval_tool,
-                    "args": {"query": user_text, "top_k": 3},
-                    "id": "required_business_context",
-                }]
 
         if not tool_calls:
             content = str(getattr(ai_message, "content", "") or "").strip()

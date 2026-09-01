@@ -1,16 +1,15 @@
-# Documentación de chatBot
+# Documentación del proyecto
 
 | Documento | Contenido |
 |---|---|
-| [Arquitectura](architecture.md) | Componentes, flujo, seguridad, persistencia y limitaciones |
-| [Kubernetes](kubernetes.md) | Despliegue y operación en el clúster |
-| [CI/CD](ci-cd.md) | Verificación, publicación y entrega continua |
-| [Pruebas](testing.md) | Suite local, alcance y requisitos de ejecución |
-| [Métricas](metrics.md) | Indicadores, alertas y observabilidad |
-| [Evaluación de trayectorias](trajectory-evaluation.md) | Calidad de decisiones y respuestas |
-| [Resultados de evaluación](evaluation-results.md) | Evidencia reproducible de LangSmith |
-| [Evidencia](evidence/README.md) | Resultado del despliegue y verificaciones |
+| [Arquitectura](architecture.md) | Componentes, flujo, fuentes autorizadas y persistencia |
+| [API HTTP](api.md) | Endpoints, contratos, errores y ejemplos |
+| [Kubernetes](kubernetes.md) | Despliegue local y en clúster |
+| [CI/CD](ci-cd.md) | Verificación y despliegue de la imagen |
+| [Pruebas](testing.md) | Cómo validar la aplicación y el flujo del repositorio |
+| [Métricas](metrics.md) | Observabilidad y métricas básicas |
+| [Evaluación de trayectorias](trajectory-evaluation.md) | Evaluación del comportamiento del agente |
+| [Resultados de evaluación](evaluation-results.md) | Evidencia reproducible |
+| [Evidencia](evidence/README.md) | Registros de despliegue y verificación |
 
-Los archivos Markdown de `knowledge_base/` no forman
-parte de esta documentación técnica: son fuentes funcionales consultadas por
-los pipelines RAG.
+La documentación técnica está alineada con el repositorio real como fuente de verdad. Los manuales, bases documentales y fuentes web obsoletas ya no forman parte del diseño activo del sistema.

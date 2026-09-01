@@ -1,41 +1,27 @@
-# Arquitectura de chatBot
+# Arquitectura del proyecto
 
 ## Propósito
 
-chatBot es una aplicación genérica con un único agente y una única fuente de
-conocimiento no parametrizada: `knowledge_base/`. Allí se almacenan todos los
-documentos del negocio, incluidos servicios, valores, contacto, registro,
-login, políticas y procedimientos.
+La aplicación se centra en la lectura y comprensión del proyecto real contenido dentro de la carpeta [repositorios](../repositorios). La fuente de verdad ya no es documentación parametrizada ni manuales antiguos; la lectura autorizada es el código y los archivos del proyecto web/backend presentes en el repositorio local.
 
 ## Flujo
 
 ```text
-Usuario -> Streamlit o FastAPI -> LangGraph -> chatBot
-                                           -> knowledge_base
-                                           -> respuesta
+Usuario -> Streamlit o FastAPI -> LangGraph -> orchestrator
+                                      -> projectReader
+                                      -> chatBot
+                                      -> codeEditor
+                                      -> respuesta
 ```
 
 1. La interfaz o `POST /api/chat` recibe la consulta.
-2. LangGraph ejecuta directamente el nodo `chatBot`.
-3. El runtime obliga a consultar `knowledge_retrieve_context`; si se habilita
-   Web, utiliza `primary_retrieve_context`, que conserva el RAG como respaldo.
-4. El pipeline busca fragmentos en `knowledge_base/` y conserva sus fuentes.
-5. El modelo redacta una respuesta; las llamadas internas nunca se muestran.
-6. La interacción se guarda en `data/chatBot.sqlite3`.
+2. El orquestador decide si la solicitud requiere lectura del proyecto, respuesta general o edición.
+3. `projectReader` recorre los archivos reales dentro de `repositorios` y extrae contexto útil.
+4. `codeEditor` trabaja sobre los archivos del repositorio para crear o corregir código.
+5. `chatBot` responde usando el proyecto real y no documentación antigua.
+6. La conversación queda persistida en `data/chatBot.sqlite3`.
 
-FastAPI mantiene endpoints síncronos para que el trabajo bloqueante de
-LangGraph y SQLite se ejecute en el pool de hilos del framework. Al apagar el
-servidor, su ciclo de vida cierra la conexión SQLite compartida.
-
-## Recuperación
-
-| Fuente | Índice persistente | Colección |
-|---|---|---|
-| `knowledge_base/` | `knowledge_base_chroma_db/` | `knowledge_base` |
-
-La recuperación léxica funciona sin conexión. La búsqueda semántica es opcional
-mediante `RAG_SEMANTIC_SEARCH_ENABLED=true` y utiliza el modelo indicado en
-`RAG_EMBEDDING_MODEL`.
+FastAPI mantiene endpoints síncronos para que el trabajo bloqueante de LangGraph y SQLite se ejecute en el pool de hilos del framework. Expone chat, consulta y limpieza de historial. Al apagar el servidor, el ciclo de vida cierra la conexión SQLite compartida.
 
 ## Componentes
 
@@ -43,18 +29,28 @@ mediante `RAG_SEMANTIC_SEARCH_ENABLED=true` y utiliza el modelo indicado en
 |---|---|
 | Interfaz Streamlit | `app.py` |
 | API HTTP | `api.py` |
-| Grafo y agente | `agent_system/graph.py`, `agent_system/chatbot_agent.py` |
-| Runtime y herramientas | `agent_system/runtime.py`, `agent_system/tools.py` |
-| Fuente e índice RAG | `knowledge_base/`, `rag/` |
+| Grafo principal | `agent_system/graph.py` |
+| Orquestación | `agent_system/orchestrator.py` |
+| Lector de proyecto | `agent_system/project_reader_agent.py` |
+| Editor de código | `agent_system/code_editor_agent.py` |
+| Chat general | `agent_system/chatbot_agent.py` |
+| Estado | `agent_system/state.py` |
 | Historial | `data_access/query_history.py`, `data/chatBot.sqlite3` |
 | Despliegue | `Dockerfile`, `compose.yaml`, `k8s/` |
 
+## Alcance de fuentes
+
+| Fuente | Estado |
+|---|---|
+| [repositorios](../repositorios) | Autorizada y principal |
+| manuales y documentación antigua | Eliminada del flujo |
+| web / búsquedas externas | Desactivada |
+| `knowledge_base` / RAG documental | Fuera del diseño activo |
+
 ## Persistencia y despliegue
 
-Kubernetes utiliza dos PVC `ReadWriteOnce`: uno para SQLite y otro para Chroma.
-El Deployment mantiene una réplica y estrategia `Recreate`. Para escalar se
-deben sustituir ambos almacenes locales por servicios compartidos.
+La persistencia mínima necesaria es el historial SQLite en `/app/data` para la conversación. El contenedor no requiere volúmenes vectoriales ni almacenamiento Chroma para la operación actual.
 
-El contenedor se ejecuta sin privilegios, con filesystem raíz de solo lectura,
-probes HTTP y escritura limitada a `/app/data`, `/app/knowledge_base_chroma_db`
-y `/tmp`.
+La misma imagen ejecuta Streamlit y FastAPI como servicios separados en Compose
+y como dos contenedores del mismo pod en Kubernetes. Ambos comparten SQLite y el
+repositorio. No existen índices vectoriales ni volúmenes de Chroma.

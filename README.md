@@ -4,7 +4,7 @@ Proyecto genérico de chatbot con un único agente. Responde consultas sobre un
 negocio o empresa, sus servicios, valores y contacto, además de guiar procesos
 como registro, login y recuperación de acceso.
 
-El proyecto integra Streamlit, LangChain, LangGraph, Chroma, LangSmith, Docker
+El proyecto integra Streamlit, LangChain, LangGraph, LangSmith, Docker
 y Kubernetes.
 
 ## Arquitectura
@@ -14,10 +14,9 @@ flowchart TD
     U[Usuario] --> UI[Streamlit]
     UI --> S[Estado LangGraph]
     S --> B[chatBot]
-    B --> KG[knowledge_base]
+    B --> R[repositorios]
     B --> UI
     S -. trazas .-> LS[LangSmith]
-    KG --> C1[(Chroma)]
 ```
 
 La descripción completa está en
@@ -27,10 +26,9 @@ La descripción completa está en
 
 | Fuente | Uso |
 |---|---|
-| `knowledge_base/` | Toda la información, servicios, contacto, guías, políticas y procedimientos |
+| `repositorios/` | Código fuente real consultado y modificado por el agente |
 
-`knowledge_base` es la única fuente local y no parametrizada. El orquestador
-decide qué documentos incorporar a ella.
+El proyecto dentro de `repositorios` es la única fuente técnica autorizada.
 
 ## Requisitos
 
@@ -61,25 +59,8 @@ OPENAI_MODEL=...
 También puede utilizarse `HUGGINGFACEHUB_API_TOKEN` y `HF_MODEL_ID`. El `.env`
 real está excluido de Git y no debe contenerse en la imagen.
 
-La búsqueda web externa está desactivada por defecto, por lo que la recuperación
-usa exclusivamente `knowledge_base`:
-
-```env
-WEB_SEARCH_ENABLED=false
-WEB_SEARCH_PROVIDER=tavily
-WEB_SEARCH_API_KEY=
-WEB_SEARCH_ALLOWED_DOMAINS=argentina.gob.ar
-WEB_SYNC_LOCAL_ON_DIFFERENCE=true
-```
-
-Al cambiar `WEB_SEARCH_ENABLED=true`, `primary_retrieve_context` consulta Tavily
-como fuente principal. Si Tavily no está disponible, falla la conexión o no hay
-resultados autorizados, la herramienta usa automáticamente RAG local. El contenido
-web nuevo o modificado se sincroniza con URL y fecha en
-`knowledge_base/actualizaciones_web.md`, sin sobrescribir los manuales canónicos.
-Para activarlo, configurá la clave del proveedor, uno o más dominios separados por
-comas y reiniciá la aplicación. Las herramientas web solo pueden consultar
-`WEB_SEARCH_ALLOWED_DOMAINS`.
+La recuperación consulta exclusivamente el código dentro de `repositorios`; no
+utiliza búsqueda web, manuales parametrizados ni bases vectoriales.
 
 ## Ejecución rápida
 
@@ -100,12 +81,15 @@ uvicorn api:app --reload --port 8000
 La API queda disponible en `http://localhost:8000` y su contrato interactivo
 en `http://localhost:8000/docs`. `POST /api/chat` recibe `message` y,
 opcionalmente, `conversation_history`; `GET /api/history` recupera el historial
-persistido. `sources` informa `knowledge_base` o `web` según la fuente usada.
+persistido; `DELETE /api/history` lo elimina explícitamente. `sources` informa
+los archivos del repositorio usados por la respuesta.
 Los errores de validación (por ejemplo, mensajes vacíos o un `limit` fuera de
 1–500) responden con HTTP 422. Para un
 frontend remoto, configurá
 `API_CORS_ORIGINS` separado por `;` en `.env` (por ejemplo,
 `https://mi-frontend.example.com`).
+
+El contrato completo está en [docs/api.md](docs/api.md).
 
 Con Docker Compose:
 
@@ -131,15 +115,34 @@ Compose publica Streamlit en `http://localhost:8501` y la API en
 - “Resumí el procedimiento documentado para este trámite.”
 - “¿Qué requisitos indica el manual técnico?”
 
-## Inicialización e inspección de datos
+## Configuración del repositorio
 
-```powershell
-python scripts/data/initialize_knowledge_vector_store.py
-python scripts/data/rebuild_knowledge_vector_store.py
-python scripts/data/inspect_sqlite_database.py
+La búsqueda se realiza directamente sobre el código, sin base vectorial ni
+índices persistidos:
+
+```env
+AGENT_PROJECT_ROOT=./repositorios/rrhh
+PROJECT_INDEX_CHUNK_SIZE=2400
+PROJECT_INDEX_CHUNK_OVERLAP=400
+PROJECT_INDEX_TOP_K=10
 ```
 
-Las utilidades restantes están documentadas por su nombre en `scripts/data/`.
+## Consultar y modificar el proyecto web
+
+El agente usa `AGENT_PROJECT_ROOT` como límite de lectura y escritura. Las
+preguntas de arquitectura, procesos o archivos se responden con fragmentos del
+repositorio y rutas de origen. Los pedidos explícitos de creación o modificación
+se convierten en cambios puntuales y se validan antes de escribir.
+
+Ejemplos:
+
+- `Explicá el proceso de aprobación de licencias de punta a punta.`
+- `¿Qué pantalla invoca GetAreasParaDDJJ104 y qué servicio la resuelve?`
+- `Modificá WebAsistencia/WebRH/... para validar el campo antes de guardar.`
+- `Creá una clase de pruebas para este servicio siguiendo el patrón existente.`
+
+Las rutas absolutas, los escapes con `..`, los tipos binarios y las ediciones
+ambiguas se rechazan sin escribir archivos.
 
 ## Pruebas
 
@@ -149,9 +152,8 @@ y resolución de problemas está en [docs/testing.md](docs/testing.md).
 ```powershell
 python -m compileall -q .
 python tests/test_persistence.py
-python tests/test_retrieval_policy.py
-python tests/test_rag_retrieval.py
 python tests/test_api.py
+python tests/test_project_agents.py
 .\scripts\validate-k8s.ps1
 ```
 
@@ -178,6 +180,8 @@ kubectl apply -k k8s/overlays/local
 kubectl rollout status deployment/chatbot `
   -n chatbot --timeout=10m
 kubectl port-forward service/chatbot 8501:80 `
+  -n chatbot
+kubectl port-forward service/chatbot 8000:8000 `
   -n chatbot
 ```
 
@@ -206,5 +210,4 @@ El índice completo está en [docs/README.md](docs/README.md).
 ## Estado del proyecto
 
 La arquitectura es desplegable. Para producción se deben gestionar secretos
-externamente, evaluar PostgreSQL para el historial, utilizar almacenamiento
-vectorial compartido e instalar monitoreo y backups.
+externamente, evaluar PostgreSQL para el historial e instalar monitoreo y backups.

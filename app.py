@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
-from data_access.query_history import load_query_history, save_query_record
+from data_access.query_history import clear_query_history, load_query_history, save_query_record
 
 from agent_system.constants import AGENT_CHATBOT, DEFAULT_AGENT, DEFAULT_ROLE
 
@@ -108,10 +108,8 @@ def init_session_state() -> None:
         st.session_state.selected_role_label = "General"
     if "langsmith_enabled" not in st.session_state:
         st.session_state.langsmith_enabled = os.getenv("LANGSMITH_TRACING", "true").lower() == "true"
-
-
-def role_to_internal(role_label: str) -> str:
-    return DEFAULT_ROLE
+    if "confirm_clear_history" not in st.session_state:
+        st.session_state.confirm_clear_history = False
 
 
 def internal_to_node(role: str) -> str:
@@ -296,9 +294,31 @@ def render_topbar() -> str:
                 f"**🤖 Agente único** · Trazabilidad {trace_status}"
             )
 
+        with role_column:
+            if not st.session_state.confirm_clear_history:
+                if st.button("🗑️ Limpiar historial", use_container_width=True):
+                    st.session_state.confirm_clear_history = True
+                    st.rerun()
+            else:
+                st.caption("¿Eliminar todas las preguntas y respuestas?")
+                confirm_column, cancel_column = st.columns(2)
+                with confirm_column:
+                    if st.button("Sí, limpiar", type="primary", use_container_width=True):
+                        deleted = clear_query_history(role)
+                        st.session_state.chat_history_by_role[role] = []
+                        st.session_state.audit_log_by_role[role] = []
+                        st.session_state.loaded_history_roles.add(role)
+                        st.session_state.confirm_clear_history = False
+                        st.toast(f"Historial eliminado ({deleted} conversaciones).")
+                        st.rerun()
+                with cancel_column:
+                    if st.button("Cancelar", use_container_width=True):
+                        st.session_state.confirm_clear_history = False
+                        st.rerun()
+
         permission_columns = st.columns(2)
         permission_items = (
-            ("📘 knowledge_base", "Habilitado"),
+            ("� repositorios", "Fuente autorizada"),
             ("🤖 Agente", "chatBot"),
         )
         for column, (label, value) in zip(permission_columns, permission_items):

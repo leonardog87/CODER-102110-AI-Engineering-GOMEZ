@@ -38,8 +38,10 @@ spec:
               containerPort: 8501
               protocol: TCP
           env:
-            - name: HOME
-              value: /tmp
+            - name: XDG_CACHE_HOME
+              value: /tmp/cache
+            - name: HF_HOME
+              value: /tmp/huggingface
           envFrom:
             - configMapRef:
                 name: chatbot-config
@@ -75,24 +77,66 @@ spec:
             failureThreshold: 3
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false
             capabilities:
               drop:
                 - ALL
           volumeMounts:
             - name: app-data
               mountPath: /app/data
-            - name: knowledge-chroma
-              mountPath: /app/knowledge_base_chroma_db
+            - name: tmp
+              mountPath: /tmp
+        - name: api
+          image: chatbot:latest
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - name: api
+              containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: chatbot-config
+            - secretRef:
+                name: chatbot-secrets
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: api
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: api
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: api
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: app-data
+              mountPath: /app/data
             - name: tmp
               mountPath: /tmp
       volumes:
         - name: app-data
           persistentVolumeClaim:
             claimName: app-data
-        - name: knowledge-chroma
-          persistentVolumeClaim:
-            claimName: knowledge-chroma
         - name: tmp
           emptyDir:
             sizeLimit: 4Gi

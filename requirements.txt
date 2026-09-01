@@ -4,13 +4,8 @@ uvicorn[standard]
 python-dotenv
 langchain
 langgraph
-langchain-community
 langchain-huggingface
-sentence-transformers
 langchain-openai
 langsmith
 agentevals>=0.0.9,<0.1
 openevals>=0.2,<0.3
-chromadb
-langchain-chroma
-pypdf

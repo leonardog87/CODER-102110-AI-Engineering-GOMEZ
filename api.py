@@ -13,7 +13,8 @@ from pydantic import BaseModel, Field
 
 from agent_system import app_graph
 from data_access.database import close_connection
-from data_access.query_history import load_query_history, save_query_record
+from data_access.query_history import clear_query_history, load_query_history, save_query_record
+from agent_system.project_index import _project_root
 
 
 class ChatMessage(BaseModel):
@@ -35,7 +36,13 @@ class ChatResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     agent: str
-    knowledge_source: str
+    knowledge_source: Literal["repositorios"]
+    repository_available: bool
+
+
+class ClearHistoryResponse(BaseModel):
+    deleted: int
+    message: str
 
 
 def _messages_for_graph(request: ChatRequest) -> List[BaseMessage]:
@@ -73,16 +80,10 @@ def _allowed_origins() -> List[str]:
     return [origin.strip() for origin in value.replace(",", ";").split(";") if origin.strip()]
 
 
-def _sources_from_traces(traces: List[Dict[str, Any]]) -> List[str]:
-    """Informa las fuentes efectivamente usadas sin exponer detalles internos."""
-    uses_web = any(
-        trace.get("tool_name") in {"web_search_allowed", "web_retrieve_allowed_url"}
-        or '"source_type": "web_primary"' in str(trace.get("content", ""))
-        for trace in traces
-    )
-    if uses_web:
-        return ["web"]
-    return ["knowledge_base"]
+def _sources_from_result(result: Dict[str, Any]) -> List[str]:
+    """Informa la fuente efectiva del sistema en repositorios."""
+    files = [str(path) for path in result.get("project_files", []) if str(path).strip()]
+    return files or ["repositorios"]
 
 
 @asynccontextmanager
@@ -94,8 +95,8 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="chatBot API",
-    description="API del agente único con RAG local y Web autorizada opcional.",
-    version="2.1.0",
+    description="API para consultar y modificar el proyecto real dentro de repositorios.",
+    version="3.0.0",
     lifespan=lifespan,
     openapi_tags=[
         {"name": "system", "description": "Estado del servicio."},
@@ -116,7 +117,8 @@ def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
         agent="chatBot",
-        knowledge_source="knowledge_base",
+        knowledge_source="repositorios",
+        repository_available=_project_root().is_dir(),
     )
 
 
@@ -157,7 +159,7 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     return ChatResponse(
         answer=answer,
-        sources=_sources_from_traces(traces),
+        sources=_sources_from_result(result),
         audit=audit,
     )
 
@@ -173,3 +175,16 @@ def history(
             status_code=500,
             detail="No se pudo recuperar el historial.",
         ) from exc
+
+
+@app.delete("/api/history", response_model=ClearHistoryResponse, tags=["chat"])
+def clear_history() -> ClearHistoryResponse:
+    """Elimina explícitamente todas las preguntas, respuestas y auditorías."""
+    try:
+        deleted = clear_query_history("General")
+        return ClearHistoryResponse(
+            deleted=deleted,
+            message="Historial eliminado correctamente.",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="No se pudo limpiar el historial.") from exc

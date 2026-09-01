@@ -62,8 +62,8 @@ def build_chat_model():
                 api_key=openai_api_key or "not-needed",
                 base_url=openai_api_base,
                 temperature=0.1,
-                timeout=60,
-                max_retries=2,
+                timeout=max(5, int(os.getenv("LLM_TIMEOUT_SECONDS", "20"))),
+                max_retries=max(0, int(os.getenv("LLM_MAX_RETRIES", "0"))),
             )
         except Exception as exc:
             logger.warning("No se pudo inicializar ChatOpenAI local: %s", exc)
@@ -137,25 +137,9 @@ class OfflineFallbackChatModel:
 
         tool_names = self._available_tool_names()
 
-        retrieval_tool = next(
-            (
-                name
-                for name in ("primary_retrieve_context", "knowledge_retrieve_context")
-                if name in tool_names
-            ),
-            None,
-        )
-        if retrieval_tool and user_text:
-            return AIMessage(
-                content=(
-                    f'{{"name": "{retrieval_tool}", '
-                    f'"arguments": {{"query": {json.dumps(user_text, ensure_ascii=False)}, "top_k": 2}}}}'
-                )
-            )
-
         content = (
-            "Respuesta de respaldo: chatBot está operativo, "
-            "pero el proveedor LLM configurado no esta disponible ahora."
+            "Respuesta de respaldo: chatBot está operativo, pero esta solicitud "
+            "no pudo ser completada por el proveedor LLM dentro de los límites configurados."
         )
         if user_text:
             content += f" Consulta recibida: {user_text}"

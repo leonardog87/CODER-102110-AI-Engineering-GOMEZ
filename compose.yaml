@@ -9,7 +9,6 @@ services:
       - .env
     environment:
       CHATBOT_DB: /app/data/chatBot.sqlite3
-      KNOWLEDGE_CHROMA_PERSIST_DIR: /app/knowledge_base_chroma_db
     ports:
       - "8501:8501"
     healthcheck:
@@ -24,7 +23,7 @@ services:
       retries: 3
     volumes:
       - app-data:/app/data
-      - knowledge-chroma:/app/knowledge_base_chroma_db
+      - ./repositorios:/app/repositorios
 
   api:
     build:
@@ -36,7 +35,6 @@ services:
       - .env
     environment:
       CHATBOT_DB: /app/data/chatBot.sqlite3
-      KNOWLEDGE_CHROMA_PERSIST_DIR: /app/knowledge_base_chroma_db
     command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8000:8000"
@@ -52,8 +50,7 @@ services:
       retries: 3
     volumes:
       - app-data:/app/data
-      - knowledge-chroma:/app/knowledge_base_chroma_db
+      - ./repositorios:/app/repositorios
 
 volumes:
   app-data:
-  knowledge-chroma:

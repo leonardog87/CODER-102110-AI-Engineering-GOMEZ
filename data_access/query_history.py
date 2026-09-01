@@ -176,3 +176,13 @@ def load_query_history(role: str, limit: int = 100) -> List[Dict[str, Any]]:
             record.pop("tool_traces_json", None)
         records.append(record)
     return records
+
+
+def clear_query_history(role: str) -> int:
+    """Elimina, bajo solicitud explícita, todo el historial del ámbito autorizado."""
+    authorized_role = _validate_role(role)
+    ensure_query_history_table()
+    conn = get_connection()
+    cursor = conn.execute("DELETE FROM query_history WHERE role = ?", (authorized_role,))
+    conn.commit()
+    return max(0, int(cursor.rowcount))

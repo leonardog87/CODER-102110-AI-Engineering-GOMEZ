@@ -29,7 +29,7 @@ Experimento válido:
 Interpretación:
 
 - esta ejecución corresponde a la arquitectura anterior y no valida el agente único;
-- las próximas ejecuciones deben comprobar el nodo `chatBot` y el uso exclusivo de `knowledge_base`;
+- las próximas ejecuciones deben comprobar el orquestador y el uso exclusivo del código en `repositorios`;
 - todas las ejecuciones terminaron con una respuesta no vacía y decisión
   `end`.
 

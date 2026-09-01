@@ -1,4 +1,8 @@
-# Evidencia de ejecución
+# Evidencia histórica de ejecución
+
+> Corresponde al despliegue anterior con Chroma. Los manifiestos actuales usan
+> un único PVC `app-data` y dos contenedores (`app` y `api`). Esta evidencia debe
+> regenerarse después del próximo rollout y no representa el estado actual.
 
 ## Kubernetes local
 

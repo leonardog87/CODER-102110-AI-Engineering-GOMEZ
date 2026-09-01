@@ -17,6 +17,34 @@ spec:
     - host: chatbot.example.com
       http:
         paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: chatbot
+                port:
+                  name: api
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: chatbot
+                port:
+                  name: api
+          - path: /docs
+            pathType: Prefix
+            backend:
+              service:
+                name: chatbot
+                port:
+                  name: api
+          - path: /openapi.json
+            pathType: Exact
+            backend:
+              service:
+                name: chatbot
+                port:
+                  name: api
           - path: /
             pathType: Prefix
             backend:
