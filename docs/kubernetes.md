@@ -3,9 +3,10 @@
 ## Elección
 
 Kubernetes es preferible a serverless para este proyecto porque SQLite y las
-dos colecciones Chroma requieren almacenamiento persistente y un único
-escritor. El manifiesto utiliza una réplica, PVC `ReadWriteOnce` y estrategia
-`Recreate`.
+dos colecciones Chroma requieren almacenamiento persistente y acceso desde un
+único Pod. El manifiesto utiliza una réplica, PVC `ReadWriteOnce` y estrategia
+`Recreate`. El Pod ejecuta dos contenedores de la misma imagen: Streamlit en
+8501 y FastAPI en 8000; ambos comparten los tres PVC.
 
 ## Requisitos
 
@@ -37,10 +38,13 @@ kubectl rollout status deployment/agente-corporativo-ia `
   -n agente-corporativo-ia --timeout=10m
 kubectl port-forward service/agente-corporativo-ia 8501:80 `
   -n agente-corporativo-ia
+kubectl port-forward service/agente-corporativo-ia 8000:8000 `
+  -n agente-corporativo-ia
 ```
 
-La aplicación queda disponible en `http://localhost:8501`. El port-forward
-debe permanecer en ejecución mientras se utiliza la aplicación.
+Streamlit queda disponible en `http://localhost:8501` y FastAPI en
+`http://localhost:8000` (`/docs`, `/health/live` y `/health/ready`). Cada
+port-forward debe permanecer en ejecución mientras se utiliza el servicio.
 
 ## Secretos
 
@@ -95,9 +99,12 @@ kubectl get pods,pvc,service,ingress -n agente-corporativo-ia
 kubectl logs deployment/agente-corporativo-ia -n agente-corporativo-ia
 kubectl port-forward service/agente-corporativo-ia 8501:80 `
   -n agente-corporativo-ia
+kubectl port-forward service/agente-corporativo-ia 8000:8000 `
+  -n agente-corporativo-ia
 ```
 
-La comprobación local queda disponible en `http://localhost:8501`.
+Comprobá Streamlit en `http://localhost:8501` y FastAPI con
+`Invoke-RestMethod http://localhost:8000/health/ready`.
 
 ## CD automático
 

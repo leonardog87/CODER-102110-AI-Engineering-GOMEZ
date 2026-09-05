@@ -16,3 +16,12 @@ spec:
             limits:
               cpu: "2"
               memory: 4Gi
+        - name: api
+          imagePullPolicy: Never
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 4Gi

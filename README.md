@@ -38,7 +38,7 @@ La descripción completa está en
 | Rol | Conocimiento general | Manuales complejos | Datos de empleados |
 |---|---:|---:|---|
 | Invitado | Sí | No | No |
-| Empleado | Sí | Sí | Sí, sin salarios |
+| Empleado | No | Sí, solo `manual_empleados.md` | Sí, sin salarios |
 
 La selección manual de rol simplifica el uso local. Antes de desplegar en un
 entorno empresarial debe reemplazarse por identidad verificada, como se explica
@@ -109,10 +109,11 @@ API para un frontend C#/JavaScript:
 uvicorn api:app --reload --port 8000
 ```
 
-La API queda disponible en `http://localhost:8000` y su contrato interactivo
-en `http://localhost:8000/docs`. `POST /api/chat` recibe `message`, `role` y,
-opcionalmente, `conversation_history`; `GET /api/history/{role}` recupera el
-historial persistido. Para un frontend remoto, configurá
+La API queda disponible en `http://localhost:8000`, su contrato interactivo
+en `http://localhost:8000/docs` y sus sondas en `/health/live` y
+`/health/ready`. `POST /api/chat` recibe `message`, `role` y, opcionalmente,
+`conversation_history`; `GET /api/history/{role}` recupera el historial
+persistido con un `limit` de 1 a 500. Para un frontend remoto, configurá
 `API_CORS_ORIGINS` separado por `;` en `.env` (por ejemplo,
 `https://mi-frontend.example.com`). En producción, el rol debe obtenerse de la
 identidad autenticada del backend, no confiarse al JSON del navegador.
@@ -152,13 +153,16 @@ La consulta salarial debe ser rechazada y ningún resultado MCP debe incluir
 python scripts/data/migrate_employees_to_sqlite.py
 python scripts/data/initialize_complex_vector_store.py
 python scripts/data/initialize_knowledge_vector_store.py
+python scripts/data/rebuild_complex_vector_store.py
 python scripts/data/rebuild_knowledge_vector_store.py
 python scripts/data/inspect_sqlite_database.py
 python scripts/data/inspect_employee_analytics.py count --puesto desarrolladores
 python scripts/data/inspect_employee_analytics.py distribution --group-by area
 ```
 
-Las utilidades restantes están documentadas por su nombre en `scripts/data/`.
+Los comandos `initialize_*` crean una colección inexistente sin reemplazarla;
+los comandos `rebuild_*` regeneran la colección correspondiente desde sus
+fuentes editables.
 
 ## Pruebas
 
@@ -167,6 +171,7 @@ y resolución de problemas está en [docs/testing.md](docs/testing.md).
 
 ```powershell
 python -m compileall -q .
+python tests/test_api.py
 python tests/test_persistence.py
 python tests/test_mcp_protocol.py
 python tests/test_rag_retrieval.py
@@ -196,6 +201,8 @@ kubectl apply -k k8s/overlays/local
 kubectl rollout status deployment/agente-corporativo-ia `
   -n agente-corporativo-ia --timeout=10m
 kubectl port-forward service/agente-corporativo-ia 8501:80 `
+  -n agente-corporativo-ia
+kubectl port-forward service/agente-corporativo-ia 8000:8000 `
   -n agente-corporativo-ia
 ```
 

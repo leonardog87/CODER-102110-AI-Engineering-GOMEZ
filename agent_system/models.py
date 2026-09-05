@@ -5,9 +5,8 @@ from __future__ import annotations
 import logging
 import os
 import unicodedata
-from functools import lru_cache, wraps
-from typing import Any, Dict, List, Optional
-from contextlib import contextmanager
+from functools import lru_cache
+from typing import Any, Dict, List
 
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage
@@ -20,83 +19,6 @@ _token = os.getenv("HUGGINGFACEHUB_API_TOKEN") or os.getenv("HF_TOKEN")
 if _token:
     os.environ["HF_TOKEN"] = _token
     os.environ["HUGGINGFACEHUB_API_TOKEN"] = _token
-
-
-def get_langsmith_tracer():
-    """Obtiene un tracer de LangSmith configurado con el proyecto actual."""
-    try:
-        from langchain.callbacks.tracers import LangChainTracer
-        from langsmith import Client
-    except ImportError:
-        logger.warning("LangChainTracer o Client no están disponibles")
-        return None
-        
-    langsmith_api_key: str = os.getenv("LANGSMITH_API_KEY", "")
-    langsmith_project: str = os.getenv("LANGSMITH_PROJECT", "proyecto_coder")
-    langsmith_tracing: str = os.getenv("LANGSMITH_TRACING", "true")
-    
-    if langsmith_tracing.lower() != "true":
-        logger.info("LangSmith tracing está desactivado")
-        return None
-        
-    if not langsmith_api_key:
-        logger.warning("No se encontró LANGSMITH_API_KEY")
-        return None
-        
-    try:
-        client = Client(api_key=langsmith_api_key)
-        tracer = LangChainTracer(
-            project_name=langsmith_project,
-            client=client
-        )
-        logger.info(f"Tracer de LangSmith creado para proyecto: {langsmith_project}")
-        return tracer
-    except Exception as e:
-        logger.warning(f"No se pudo crear tracer de LangSmith: {e}")
-        return None
-
-
-@contextmanager
-def langsmith_tracing(project_name: Optional[str] = None):
-    """Context manager para habilitar tracing de LangSmith."""
-    tracer = get_langsmith_tracer()
-    if tracer:
-        try:
-            # Intentar usar el tracer directamente
-            from langchain.callbacks.manager import CallbackManager
-            # Creamos un manager con el tracer
-            manager = CallbackManager([tracer])
-            # Lo pasamos como contexto
-            yield manager
-        except Exception as e:
-            logger.warning(f"Error en LangSmith tracing: {e}")
-            yield None
-    else:
-        logger.info("LangSmith no disponible, ejecutando sin tracing")
-        yield None
-
-
-def with_langsmith_tracing(func):
-    """Decorador para ejecutar funciones con tracing de LangSmith."""
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        tracer = get_langsmith_tracer()
-        if tracer:
-            # Si la función acepta config, agregamos el callback
-            if "config" in kwargs:
-                kwargs["config"] = kwargs.get("config", {})
-                if "callbacks" not in kwargs["config"]:
-                    kwargs["config"]["callbacks"] = []
-                kwargs["config"]["callbacks"].append(tracer)
-            else:
-                # Si no, intentamos con run_manager
-                try:
-                    from langchain.callbacks.manager import CallbackManager
-                    kwargs["callback_manager"] = CallbackManager([tracer])
-                except ImportError:
-                    pass
-        return func(*args, **kwargs)
-    return wrapper
 
 
 @lru_cache(maxsize=1)

@@ -17,10 +17,24 @@ spec:
     - host: agente-corporativo-ia.example.com
       http:
         paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: agente-corporativo-ia
+                port:
+                  name: api
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: agente-corporativo-ia
+                port:
+                  name: api
           - path: /
             pathType: Prefix
             backend:
               service:
                 name: agente-corporativo-ia
                 port:
-                  name: http
+                  name: web

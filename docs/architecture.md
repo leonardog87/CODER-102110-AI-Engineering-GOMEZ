@@ -39,7 +39,7 @@ Manager determinista basado en rol
   |
   +-- Invitado --------> RAG de conocimiento general
   |
-  +-- Empleado --------> RAG general + RAG complejo
+  +-- Empleado --------> RAG exclusivo del manual de empleados
   |                       + MCP Empleado -> SQLite sin salarios
   |
   |
@@ -75,7 +75,7 @@ Persistencia ------------> SQLite + dos colecciones Chroma
 | Rol | Documentación general | Manuales complejos | Datos de empleados |
 |---|---:|---:|---|
 | Invitado | Sí | No | No |
-| Empleado | Sí | Sí | Sí, sin salarios ni estadísticas salariales |
+| Empleado | No | Sí | Sí, sin salarios ni estadísticas salariales |
 
 El manager de `agent_system/manager_agent.py` no utiliza un LLM para autorizar:
 lee `rol_usuario` del estado confiable y asigna un especialista. Cada instancia
@@ -96,10 +96,12 @@ Existen dos pipelines RAG independientes:
 | Manuales complejos | `manuales_complejos/` | `manuales_complejos_chroma_db/` |
 | Conocimiento general | `knowledge_base/` | `manuales_simples_chroma_db/` |
 
-Los manuales complejos se dividen en fragmentos de 800 caracteres con
-solapamiento de 120; el conocimiento general usa fragmentos de 600 con
-solapamiento de 100. Cada índice recupera hasta seis candidatos, aplica su
-propio umbral de relevancia y entrega los dos mejores tras el reranking. Los
+Los manuales complejos se dividen por sección en fragmentos de hasta 1000
+caracteres con solapamiento de 180; el conocimiento general usa fragmentos de
+600 con solapamiento de 100. El RAG complejo considera al menos 12 candidatos,
+combina recuperación vectorial con coincidencias léxicas normalizadas (incluidas
+consultas sin tilde) y devuelve como máximo tres fragmentos de la sección más
+relevante. El RAG general devuelve hasta dos fragmentos. Los
 embeddings usan por defecto
 `sentence-transformers/all-MiniLM-L6-v2`. La búsqueda recupera más candidatos
 que el resultado final y `rag/ranking.py` los reordena según cobertura textual
@@ -184,23 +186,26 @@ El contenedor:
 - no monta el token del ServiceAccount;
 - escribe únicamente en PVC y en `/tmp`.
 
-Kubernetes limita la entrada mediante `NetworkPolicy`, publica la aplicación a
-través de Service e Ingress y espera TLS en producción. Las probes de startup,
-readiness y liveness consultan `/_stcore/health`.
+Kubernetes limita la entrada mediante `NetworkPolicy` y ejecuta Streamlit y
+FastAPI como contenedores del mismo Pod. El Service publica los puertos 80 y
+8000; el Ingress dirige `/` a Streamlit y `/api` y `/health` a FastAPI. Las
+probes consultan `/_stcore/health` para la UI y `/health/live` o
+`/health/ready` para la API.
 
 Estas medidas protegen el runtime, pero la autenticación externa sigue siendo
 responsabilidad del Ingress o de la plataforma de identidad.
 
 ## Persistencia y escalabilidad
 
-La aplicación utiliza tres PVC `ReadWriteOnce`:
+El único Pod de la aplicación utiliza tres PVC `ReadWriteOnce`:
 
 - base SQLite e historial;
 - colección Chroma de manuales complejos;
 - colección Chroma de conocimiento general.
 
-El Deployment mantiene una réplica y estrategia `Recreate` para impedir dos
-escritores simultáneos. No se debe aumentar `replicas` con esta arquitectura.
+El Deployment mantiene una réplica y estrategia `Recreate` para impedir que
+dos Pods accedan simultáneamente a los archivos persistentes. No se debe
+aumentar `replicas` con esta arquitectura.
 Para escalar horizontalmente se requiere migrar:
 
 - SQLite a PostgreSQL u otro servicio transaccional compartido;

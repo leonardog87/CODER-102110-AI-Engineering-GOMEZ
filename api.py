@@ -5,8 +5,9 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.concurrency import run_in_threadpool
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from pydantic import BaseModel, Field
 
@@ -68,26 +69,41 @@ def _allowed_origins() -> List[str]:
     return [origin.strip() for origin in value.replace(",", ";").split(";") if origin.strip()]
 
 
-app = FastAPI(title="Agente Corporativo IA API", version="1.0.0")
+app = FastAPI(
+    title="Agente Corporativo IA API",
+    version="1.1.0",
+    description="API HTTP del agente corporativo para clientes web y de escritorio.",
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
-@app.get("/health")
-def health() -> Dict[str, str]:
+@app.get("/health", tags=["health"])
+@app.get("/health/live", tags=["health"])
+async def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/api/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
+@app.get("/health/ready", tags=["health"])
+async def readiness() -> Dict[str, str]:
     try:
-        result = app_graph.invoke(
-            {"messages": _messages_for_graph(request), "rol_usuario": request.role}
+        await run_in_threadpool(load_query_history, "Invitado", 1)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Persistencia no disponible.") from exc
+    return {"status": "ready"}
+
+
+@app.post("/api/chat", response_model=ChatResponse, tags=["chat"])
+async def chat(request: ChatRequest) -> ChatResponse:
+    try:
+        result = await run_in_threadpool(
+            app_graph.invoke,
+            {"messages": _messages_for_graph(request), "rol_usuario": request.role},
         )
     except Exception as exc:
         raise HTTPException(status_code=503, detail="El agente no está disponible.") from exc
@@ -105,7 +121,8 @@ def chat(request: ChatRequest) -> ChatResponse:
     }
 
     try:
-        record_id = save_query_record(
+        record_id = await run_in_threadpool(
+            save_query_record,
             role=request.role,
             agent_name=audit["agent"] or "agente_invitado",
             user_query=request.message,
@@ -123,6 +140,9 @@ def chat(request: ChatRequest) -> ChatResponse:
     return ChatResponse(answer=answer, role=request.role, audit=audit)
 
 
-@app.get("/api/history/{role}")
-def history(role: UserRole, limit: int = 100) -> List[Dict[str, Any]]:
-    return load_query_history(role, limit=max(1, min(limit, 500)))
+@app.get("/api/history/{role}", tags=["history"])
+async def history(
+    role: UserRole,
+    limit: int = Query(default=100, ge=1, le=500),
+) -> List[Dict[str, Any]]:
+    return await run_in_threadpool(load_query_history, role, limit)

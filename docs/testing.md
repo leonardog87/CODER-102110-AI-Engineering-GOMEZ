@@ -10,6 +10,7 @@ Desde la raíz del repositorio:
 
 ```powershell
 python -m compileall -q .
+python tests/test_api.py
 python tests/test_persistence.py
 python tests/test_mcp_protocol.py
 python tests/test_rag_retrieval.py
@@ -25,9 +26,10 @@ los mismos almacenes locales.
 
 | Prueba | Verifica |
 |---|---|
+| `test_api.py` | Contrato OpenAPI, sonda de vida y validación de parámetros HTTP |
 | `test_persistence.py` | Colecciones Chroma, migración SQLite, historial aislado por rol, sanitización salarial y llamadas deterministas de herramientas |
 | `test_mcp_protocol.py` | Negociación con el SDK oficial, herramientas publicadas por rol, permisos, esquema visible y ausencia de salarios para Empleado |
-| `test_rag_retrieval.py` | Recuperación de ambos índices, máximo de fragmentos, fuentes esperadas y rechazo de consultas fuera de dominio |
+| `test_rag_retrieval.py` | Recuperación de ambos índices, foco por trámite, consultas sin tilde, fuentes esperadas y rechazo de consultas fuera de dominio |
 | `validate-k8s.ps1` | Renderizado y validaciones estáticas de manifiestos base y overlays |
 
 Las pruebas RAG fuerzan el modo offline y usan las colecciones Chroma
@@ -36,6 +38,6 @@ la suite para confirmar que las fuentes y umbrales siguen siendo válidos.
 
 ## Automatización
 
-CI ejecuta las tres pruebas Python, compila el proyecto, renderiza Kubernetes y
+CI ejecuta las pruebas Python, compila el proyecto, renderiza Kubernetes y
 construye la imagen. CD repite la compilación y las tres pruebas antes de
 publicar una imagen de release.
