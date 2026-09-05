@@ -16,19 +16,13 @@ flowchart TD
     S --> M[Manager determinista]
     M --> I[Agente Invitado]
     M --> E[Agente Empleado]
-    M --> A[Agente Administrador]
     I --> KG[RAG de conocimiento general]
     E --> KG
     E --> CR[RAG de manuales complejos]
-    A --> KG
-    A --> CR
     E --> ME[MCP Empleado]
-    A --> MA[MCP Administrador]
     ME --> DB[(SQLite)]
-    MA --> DB
     I --> EV[Evaluador]
     E --> EV
-    A --> EV
     EV -->|retry acotado| M
     EV -->|end| UI
     S -. trazas .-> LS[LangSmith]
@@ -45,7 +39,6 @@ La descripción completa está en
 |---|---:|---:|---|
 | Invitado | Sí | No | No |
 | Empleado | Sí | Sí | Sí, sin salarios |
-| Administrador | Sí | Sí | Sí, incluido salario y estadísticas |
 
 La selección manual de rol simplifica el uso local. Antes de desplegar en un
 entorno empresarial debe reemplazarse por identidad verificada, como se explica
@@ -153,13 +146,6 @@ de empleados.
 La consulta salarial debe ser rechazada y ningún resultado MCP debe incluir
 `Sueldo_ARS`.
 
-### Administrador
-
-- “Listá los empleados del área de Desarrollo.”
-- “¿Cuál es el sueldo promedio de los empleados consultados?”
-- “Combiná la política de acceso a bases de datos con la información del área
-  de Infraestructura.”
-
 ## Inicialización e inspección de datos
 
 ```powershell
@@ -170,8 +156,6 @@ python scripts/data/rebuild_knowledge_vector_store.py
 python scripts/data/inspect_sqlite_database.py
 python scripts/data/inspect_employee_analytics.py count --puesto desarrolladores
 python scripts/data/inspect_employee_analytics.py distribution --group-by area
-python scripts/data/inspect_employee_analytics.py salary `
-  --role Administrador --area Infraestructura
 ```
 
 Las utilidades restantes están documentadas por su nombre en `scripts/data/`.

@@ -1,4 +1,4 @@
-"""Prueba persistencia documental, chats por rol y controles salariales."""
+"""Prueba persistencia documental, chats por rol y controles de acceso."""
 
 from __future__ import annotations
 
@@ -25,7 +25,6 @@ from data_access.service import (  # noqa: E402
     mcp_count_employees,
     mcp_employee_distribution,
     mcp_execute_query,
-    mcp_salary_statistics,
 )
 from agent_system.runtime import (  # noqa: E402
     _direct_tool_call_for_structured_query,
@@ -34,10 +33,9 @@ from agent_system.runtime import (  # noqa: E402
     _format_database_policy_result,
 )
 from agent_system.tools import (  # noqa: E402
-    consultar_empleados_mcp_administrador,
-    contar_empleados_mcp_administrador,
-    distribucion_empleados_mcp_administrador,
-    estadisticas_salariales_mcp_administrador,
+    consultar_empleados_mcp_empleado,
+    contar_empleados_mcp_empleado,
+    distribucion_empleados_mcp_empleado,
     rag_retrieve_context,
     verificar_respuesta_con_fuentes,
 )
@@ -67,31 +65,18 @@ def assert_role_chat_persistence() -> None:
         {"Area": "Infraestructura"},
         "Empleado",
     )
-    administrator_result = mcp_execute_query(
-        "empleados",
-        {"Area": "Infraestructura"},
-        "Administrador",
-    )
-
     employee_payload = json.dumps(employee_result, ensure_ascii=False)
-    administrator_payload = json.dumps(administrator_result, ensure_ascii=False)
     assert "Sueldo_ARS" not in employee_payload
     assert "promedio_sueldo" not in employee_payload
-    assert "Sueldo_ARS" in administrator_payload
-    assert "promedio_sueldo" in administrator_payload
 
     developer_result = mcp_execute_query(
         "empleados",
         {"Puesto": "desarrolladores"},
-        "Administrador",
+        "Empleado",
     )
     assert developer_result["data"]["total"] == 4, developer_result
 
-    developer_area_result = mcp_execute_query(
-        "empleados",
-        {"Area": "desarrolladores"},
-        "Administrador",
-    )
+    developer_area_result = mcp_execute_query("empleados", {"Area": "desarrolladores"}, "Empleado")
     assert developer_area_result["data"]["total"] == 4, developer_area_result
 
     assert mcp_count_employees(
@@ -101,38 +86,25 @@ def assert_role_chat_persistence() -> None:
     distribution = mcp_employee_distribution("area", {}, "Empleado")
     assert distribution["data"]["total"] == 20
     assert all("Sueldo_ARS" not in group for group in distribution["data"]["groups"])
-    salary_stats = mcp_salary_statistics(
-        {"Area": "Infraestructura"},
-        "Administrador",
-    )
-    assert salary_stats["data"]["mediana"] == 4100000
-    assert mcp_salary_statistics({}, "Empleado")["status_code"] == 403
-
     direct_call = _direct_tool_call_for_structured_query(
         [HumanMessage(content="dime cuantos empleados son desarrolladores")],
-        [consultar_empleados_mcp_administrador],
+        [consultar_empleados_mcp_empleado],
     )
     assert direct_call is not None
     assert direct_call["args"] == {"puesto": "Developer"}
 
     direct_count_call = _direct_tool_call_for_structured_query(
         [HumanMessage(content="dime cuantos empleados son desarrolladores")],
-        [contar_empleados_mcp_administrador],
+        [contar_empleados_mcp_empleado],
     )
-    assert direct_count_call["name"] == "contar_empleados_mcp_administrador"
+    assert direct_count_call["name"] == "contar_empleados_mcp_empleado"
     assert direct_count_call["args"] == {"puesto": "Developer"}
 
     direct_distribution_call = _direct_tool_call_for_structured_query(
         [HumanMessage(content="distribución porcentual por área")],
-        [distribucion_empleados_mcp_administrador],
+        [distribucion_empleados_mcp_empleado],
     )
     assert direct_distribution_call["args"] == {"group_by": "area"}
-
-    direct_salary_call = _direct_tool_call_for_structured_query(
-        [HumanMessage(content="mediana salarial de Infraestructura")],
-        [estadisticas_salariales_mcp_administrador],
-    )
-    assert direct_salary_call["args"] == {"area": "Infraestructura"}
 
     formatted = _format_tool_result_for_user(
         [
@@ -154,7 +126,7 @@ def assert_role_chat_persistence() -> None:
                 )
             )
         ],
-        [rag_retrieve_context, consultar_empleados_mcp_administrador],
+        [rag_retrieve_context, consultar_empleados_mcp_empleado],
     )
     assert isinstance(composite_calls, list)
     assert [call["id"] for call in composite_calls] == [
@@ -165,7 +137,7 @@ def assert_role_chat_persistence() -> None:
     infrastructure_result = mcp_execute_query(
         "empleados",
         {"Area": "Infraestructura"},
-        "Administrador",
+        "Empleado",
     )
     composite_response = _format_policy_infrastructure_result(
         [
@@ -226,12 +198,10 @@ def assert_role_chat_persistence() -> None:
     expected_queries = {
         "Invitado": "¿Cómo recupero mi contraseña?",
         "Empleado": "Lista de empleados de Infraestructura",
-        "Administrador": "Lista de empleados con salarios",
     }
     expected_responses = {
         "Invitado": "Consulta al manual simple.",
         "Empleado": employee_payload,
-        "Administrador": administrator_payload,
     }
 
     for role in expected_queries:
@@ -249,7 +219,7 @@ def assert_role_chat_persistence() -> None:
 
     histories = {
         role: load_query_history(role)
-        for role in ("Invitado", "Empleado", "Administrador")
+        for role in ("Invitado", "Empleado")
     }
     for role, rows in histories.items():
         assert len(rows) == 1, f"Historial inesperado para {role}: {rows}"
@@ -258,11 +228,6 @@ def assert_role_chat_persistence() -> None:
         assert rows[0]["assistant_response"] == expected_responses[role]
 
     assert "Sueldo_ARS" not in json.dumps(histories["Empleado"], ensure_ascii=False)
-    assert "Sueldo_ARS" in json.dumps(
-        histories["Administrador"],
-        ensure_ascii=False,
-    )
-
     try:
         load_query_history("RolNoAutorizado")
     except ValueError:
@@ -289,8 +254,8 @@ def main() -> int:
 
         assert_role_chat_persistence()
         print("[OK] Chats recuperados después de reiniciar la conexión")
-        print("[OK] Historial aislado para Invitado, Empleado y Administrador")
-        print("[OK] Empleado sin salarios; Administrador con acceso completo")
+        print("[OK] Historial aislado para Invitado y Empleado")
+        print("[OK] Empleado sin salarios")
         print("[OK] Roles desconocidos rechazados")
         return 0
     finally:

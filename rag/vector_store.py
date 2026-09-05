@@ -59,14 +59,20 @@ def _build_vector_store(chunks: List[Document]):
 
     try:
         logger.info("Inicializando ChromaDB en: %s", CHROMA_PERSIST_DIR)
-        vector_store = Chroma.from_documents(
-            documents=chunks,
-            embedding=embeddings,
-            ids=[str(chunk.metadata["chunk_id"]) for chunk in chunks],
+        vector_store = Chroma(
+            embedding_function=embeddings,
             persist_directory=CHROMA_PERSIST_DIR,
             collection_name=CHROMA_COLLECTION_NAME,
             relevance_score_fn=normalized_euclidean_relevance,
         )
+
+        chunk_ids = [str(chunk.metadata["chunk_id"]) for chunk in chunks]
+        stored_ids = set(vector_store._collection.get(include=[])['ids'])
+        obsolete_ids = sorted(stored_ids - set(chunk_ids))
+        if obsolete_ids:
+            vector_store.delete(ids=obsolete_ids)
+            logger.info("%s chunks obsoletos eliminados de ChromaDB", len(obsolete_ids))
+        vector_store.add_documents(documents=chunks, ids=chunk_ids)
 
         if hasattr(vector_store, "persist"):
             vector_store.persist()

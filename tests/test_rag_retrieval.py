@@ -5,12 +5,19 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from langchain_core.messages import HumanMessage
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from rag.knowledge_pipeline import retrieve_knowledge_documents
 from rag.pipeline import retrieve_documents
 from agent_system.manager_agent import agente_encargado
+from agent_system.runtime import (
+    _is_ambiguous_personal_data_update,
+    invoke_specialist_agent,
+)
+from agent_system.tools import rag_retrieve_context
 
 
 def _sources(documents) -> set[str]:
@@ -25,9 +32,39 @@ def test_deterministic_role_sources() -> None:
     employee_text = employee["motivo_designacion"].lower()
 
     assert "manual_usuario" in invited_text
-    assert "manual_usuario" in employee_text
+    assert "manual_usuario" not in employee_text
     assert "manual_empleado" in employee_text
     assert "manual_empleado" not in invited_text
+
+
+def test_family_context_excludes_unrelated_procedures() -> None:
+    family_docs = retrieve_documents(
+        "¿Cómo actualizo los datos de mi grupo familiar?",
+        top_k=3,
+    )
+    family_context = " ".join(
+        document.page_content.lower() for document in family_docs
+    )
+    assert family_docs
+    assert "actualización de datos de grupo familiar" in family_context, family_context
+    assert "copia legible del dni del familiar" in family_context, family_context
+    assert "vía presencial" in family_context, family_context
+    assert "cambio de entidad bancaria" not in family_context, family_context
+
+
+def test_ambiguous_personal_data_update_requires_clarification() -> None:
+    assert _is_ambiguous_personal_data_update("¿Cómo actualizo mis datos?")
+    assert not _is_ambiguous_personal_data_update(
+        "¿Cómo actualizo los datos de mi grupo familiar?"
+    )
+    result = invoke_specialist_agent(
+        system_prompt="",
+        messages=[HumanMessage(content="¿Cómo actualizo mis datos?")],
+        tools=[rag_retrieve_context],
+    )
+    response = result["messages"][-1].content
+    assert "¿Qué datos querés actualizar" in response
+    assert "No encontré" not in response
 
 
 def main() -> int:
@@ -63,15 +100,28 @@ def main() -> int:
     assert "normativa_acceso_bases_datos.md" in _sources(database_docs)
     assert "guia_problemas_red.md" in _sources(network_docs)
 
+    test_family_context_excludes_unrelated_procedures()
+
+    assert not retrieve_documents("familiar", top_k=3)
+
     test_deterministic_role_sources()
 
     print("[OK] Recuperación relevante limitada a dos fragmentos")
     print("[OK] Público destinatario del portal recuperado correctamente")
     print("[OK] Consultas fuera de dominio filtradas")
     print("[OK] Fuentes complejas correctas para normativa y red")
+    print("[OK] Grupo familiar recuperado completo y sin trámites ajenos")
     print("[OK] Contexto determinista por rol configurado")
     return 0
 
 
 if __name__ == "__main__":
+    if "--ambiguity-only" in sys.argv:
+        test_ambiguous_personal_data_update_requires_clarification()
+        print("[OK] Las actualizaciones ambiguas solicitan precisión")
+        raise SystemExit(0)
+    if "--family-only" in sys.argv:
+        test_family_context_excludes_unrelated_procedures()
+        print("[OK] Grupo familiar recuperado completo y sin trámites ajenos")
+        raise SystemExit(0)
     raise SystemExit(main())

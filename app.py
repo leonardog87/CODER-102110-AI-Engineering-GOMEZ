@@ -21,7 +21,6 @@ from agent_system.constants import (
     AGENT_MANAGER,
     DEFAULT_AGENT,
     DEFAULT_ROLE,
-    ROLE_ADMINISTRADOR,
     ROLE_EMPLEADO,
     ROLE_INVITADO,
     ROLE_TO_AGENT,
@@ -105,7 +104,6 @@ st.set_page_config(
 ROLE_OPTIONS = {
     "Invitado": ROLE_INVITADO,
     "Empleado": ROLE_EMPLEADO,
-    "Administrador": ROLE_ADMINISTRADOR,
 }
 
 ROLE_PERMISSIONS = {
@@ -120,12 +118,6 @@ ROLE_PERMISSIONS = {
         "Manuales complejos": "Habilitado",
         "SQLite empleados": "Sin salarios",
         "badge": "🟠 Empleado",
-    },
-    ROLE_ADMINISTRADOR: {
-        "Manuales simples": "Habilitado",
-        "Manuales complejos": "Habilitado",
-        "SQLite empleados": "Acceso completo",
-        "badge": "🟢 Administrador",
     },
 }
 
@@ -169,6 +161,8 @@ def ensure_role_history_loaded(role: str) -> None:
     chat_history: List[Dict[str, str]] = []
     audit_log: List[Dict[str, Any]] = []
     for record in records:
+        if role == ROLE_EMPLEADO and _is_legacy_ungrounded_response(record):
+            continue
         chat_history.extend(
             [
                 {"role": "user", "content": record["user_query"]},
@@ -195,6 +189,23 @@ def ensure_role_history_loaded(role: str) -> None:
     st.session_state.chat_history_by_role[role] = chat_history
     st.session_state.audit_log_by_role[role] = audit_log
     st.session_state.loaded_history_roles.add(role)
+
+
+def _is_legacy_ungrounded_response(record: Dict[str, Any]) -> bool:
+    """Oculta respuestas antiguas generadas antes del modo extractivo RAG."""
+    query = str(record.get("user_query", "")).lower()
+    response = str(record.get("assistant_response", "")).lower()
+    normalized_query = " ".join(query.split())
+    legacy_markers = (
+        "mi perfil",
+        "editar datos personales",
+        "datos de contacto de emergencia",
+        "movilidad laboral",
+    )
+    return (
+        normalized_query in {"como actualizo mis datos", "como actualizo mis datos?"}
+        and any(marker in response for marker in legacy_markers)
+    )
 
 
 def role_chat_history(role: str) -> List[Dict[str, str]]:

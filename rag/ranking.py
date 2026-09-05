@@ -44,7 +44,20 @@ STOPWORDS = {
 
 def _tokenize(text: str) -> List[str]:
     tokens = re.findall(r"[a-záéíóúñ0-9]+", text.lower())
-    return [token for token in tokens if token not in STOPWORDS and len(token) > 2]
+    normalized: List[str] = []
+    suffixes = (
+        "amiento", "imiento", "aciones", "acion", "mente", "ando", "iendo",
+        "ieron", "ieron", "ar", "er", "ir", "as", "es", "os", "a", "e", "o",
+    )
+    for token in tokens:
+        if token in STOPWORDS or len(token) <= 2:
+            continue
+        normalized.append(token)
+        for suffix in suffixes:
+            if len(token) > len(suffix) + 3 and token.endswith(suffix):
+                normalized.append(token[: -len(suffix)])
+                break
+    return normalized
 
 
 def rerank_documents(
@@ -52,7 +65,7 @@ def rerank_documents(
     docs: List[Document],
     vector_scores: List[float] | None = None,
 ) -> List[Tuple[Document, float]]:
-    """Combina relevancia semántica, cobertura léxica y metadatos."""
+    """Combina similitud vectorial, coincidencia léxica y continuidad temática."""
     query_tokens = set(_tokenize(query))
 
     if not query_tokens:
@@ -63,9 +76,17 @@ def rerank_documents(
         text_tokens = set(_tokenize(doc.page_content))
         overlap = len(query_tokens & text_tokens)
         coverage = overlap / max(len(query_tokens), 1)
+        frequency = sum(
+            _tokenize(doc.page_content).count(token) for token in query_tokens
+        )
+        frequency_bonus = min(frequency / 100, 0.08)
+
+        normalized_query = " ".join(_tokenize(query))
+        normalized_text = " ".join(_tokenize(doc.page_content))
+        phrase_bonus = 0.10 if normalized_query in normalized_text else 0.0
 
         title = f"{doc.metadata.get('source_title', '')} {doc.metadata.get('category', '')}"
-        title_bonus = 0.15 if query_tokens & set(_tokenize(title)) else 0.0
+        title_bonus = 0.10 if query_tokens & set(_tokenize(title)) else 0.0
         position_bonus = 1.0 / (index + 1)
         vector_score = (
             vector_scores[index]
@@ -73,8 +94,10 @@ def rerank_documents(
             else position_bonus
         )
         final_score = (
-            (vector_score * 0.65)
-            + (coverage * 0.25)
+            (vector_score * 0.25)
+            + (coverage * 0.55)
+            + frequency_bonus
+            + phrase_bonus
             + title_bonus
             + (position_bonus * 0.02)
         )

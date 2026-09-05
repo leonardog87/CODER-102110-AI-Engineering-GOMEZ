@@ -19,7 +19,6 @@ from agent_system.web_tools import (  # noqa: E402
 )
 from agent_system.invitado_agent import INVITADO_TOOLS  # noqa: E402
 from agent_system.empleado_agent import EMPLEADO_TOOLS  # noqa: E402
-from agent_system.administrador_agent import ADMINISTRADOR_TOOLS  # noqa: E402
 
 
 def main() -> int:
@@ -36,7 +35,7 @@ def main() -> int:
         "consultar_empleados_mcp_empleado",
     ]
     assert all(tool.name in retrieval_policy.LOCAL_TOOL_NAMES for tool in selected)
-    for role_tools in (INVITADO_TOOLS, EMPLEADO_TOOLS, ADMINISTRADOR_TOOLS):
+    for role_tools in (INVITADO_TOOLS, EMPLEADO_TOOLS):
         assert not ({tool.name for tool in role_tools} & retrieval_policy.WEB_TOOL_NAMES)
 
     assert "desactivada" in web_search_allowed.invoke({"query": "prueba"})

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import json
 import re
+import unicodedata
 from typing import Any, Dict, List
 
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
@@ -310,9 +311,146 @@ def _last_human_text(messages: List[BaseMessage]) -> str:
     return ""
 
 
+def _rag_context_is_empty(tool_messages: List[ToolMessage]) -> bool:
+    """Detecta cuando el RAG no aportó evidencia utilizable."""
+    empty_markers = (
+        "no se encontraron fragmentos relevantes",
+        "no se encontro informacion relevante",
+    )
+    rag_messages = [
+        str(message.content or "").lower()
+        for message in tool_messages
+        if message.tool_call_id in {"direct_employee_manual_query", "text_tool_call"}
+        or "contexto recuperado" in str(message.content or "").lower()
+    ]
+    return bool(rag_messages) and any(
+        marker in content for content in rag_messages for marker in empty_markers
+    )
+
+
+def _rag_context_text(tool_messages: List[ToolMessage]) -> str:
+    return "\n".join(
+        str(message.content or "")
+        for message in tool_messages
+        if "# Contexto recuperado" in str(message.content or "")
+    )
+
+
+def _response_is_grounded(response: str, context: str) -> bool:
+    """Rechaza síntesis con pasos o datos que no aparecen en el contexto."""
+    if not response.strip() or not context.strip():
+        return False
+
+    stopwords = {
+        "para", "como", "este", "esta", "estos", "estas", "desde", "hasta",
+        "sobre", "debe", "deben", "puede", "podés", "puedes", "hacer", "allí",
+        "tus", "sus", "los", "las", "una", "uno", "con", "del", "por", "que",
+    }
+    def normalize(value: str) -> str:
+        decomposed = unicodedata.normalize("NFKD", value.lower())
+        return "".join(
+            char for char in decomposed if not unicodedata.combining(char)
+        )
+
+    def evidence_tokens(value: str) -> set[str]:
+        tokens = {
+            token
+            for token in re.findall(r"[a-z0-9]+", normalize(value))
+            if len(token) > 3
+        }
+        stems = set(tokens)
+        for token in tokens:
+            for suffix in ("ando", "iendo", "ieron", "aran", "aran", "ando", "ar", "er", "ir", "as", "es", "os", "a", "e", "o"):
+                if len(token) > len(suffix) + 3 and token.endswith(suffix):
+                    stems.add(token[: -len(suffix)])
+                    break
+        return stems
+
+    normalized_context = normalize(context)
+    highlighted = re.findall(r"\*\*([^*]+)\*\*|[\"“”]([^\"“”]+)[\"“”]", response)
+    for bold_text, quoted_text in highlighted:
+        phrase = normalize(bold_text or quoted_text).strip()
+        phrase_tokens = evidence_tokens(phrase)
+        context_tokens = evidence_tokens(normalized_context)
+        if phrase_tokens and len(phrase_tokens & context_tokens) / len(phrase_tokens) < 0.6:
+            return False
+
+    if re.search(r"https?://|www\.", response.lower()) and not re.search(
+        r"https?://|www\.", context.lower()
+    ):
+        return False
+
+    context_tokens = evidence_tokens(normalized_context) - stopwords
+    sentences = re.split(r"(?:\n+|(?<=[.!?])\s+)", response)
+    checked = 0
+    for sentence in sentences:
+        tokens = [
+            token
+            for token in evidence_tokens(sentence)
+            if len(token) > 3 and token not in stopwords
+        ]
+        if len(tokens) < 3 and not sentence.lstrip().startswith(("-", "*")):
+            continue
+        checked += 1
+        overlap = sum(token in context_tokens for token in set(tokens))
+        if overlap / len(set(tokens)) < 0.45:
+            return False
+    return checked > 0
+
+
+def _grounded_context_fallback(context: str) -> str:
+    return (
+        "El manual de empleados contiene esta información relacionada, sin agregar "
+        "pasos que no estén documentados:\n\n"
+        + context.strip()
+    )
+
+
+def _is_manual_only_agent(tools: List[Any] | None) -> bool:
+    names = {str(getattr(tool, "name", "")) for tool in (tools or [])}
+    return "rag_retrieve_context" in names and not names.intersection(
+        {
+            "knowledge_retrieve_context",
+            "consultar_empleados_mcp_empleado",
+            "contar_empleados_mcp_empleado",
+            "distribucion_empleados_mcp_empleado",
+        }
+    )
+
+
 def _normalize_text(text: str) -> str:
     replacements = str.maketrans("áéíóúüñÁÉÍÓÚÜÑ", "aeiouunAEIOUUN")
     return text.translate(replacements).lower()
+
+
+def _is_ambiguous_personal_data_update(text: str) -> bool:
+    """Detecta pedidos de actualización que no identifican qué dato cambiar."""
+    normalized = _normalize_text(text)
+    asks_to_update = any(
+        term in normalized
+        for term in ("actualizo", "actualizar", "modifico", "modificar", "cambio")
+    )
+    mentions_own_data = any(
+        term in normalized
+        for term in ("mis datos", "datos personales", "mi informacion")
+    )
+    specifies_procedure = any(
+        term in normalized
+        for term in (
+            "domicilio",
+            "direccion",
+            "grupo familiar",
+            "familiar",
+            "academico",
+            "estudio",
+            "titulo",
+            "foto",
+            "contrasena",
+            "clave",
+            "banco",
+        )
+    )
+    return asks_to_update and mentions_own_data and not specifies_procedure
 
 
 def _is_policy_infrastructure_query(text: str) -> bool:
@@ -423,9 +561,8 @@ def _format_policy_infrastructure_result(
     lines.extend(
         [
             "",
-            "Aplicación conjunta: el Administrador puede consultar estos registros, "
-            "pero debe limitar la exposición a los campos necesarios, registrar la "
-            "consulta y proteger datos sensibles como DNI y salarios.",
+            "Aplicación conjunta: el Empleado puede consultar estos registros no "
+            "salariales y debe limitar la exposición a los campos necesarios.",
             "",
             "Fuente: `normativa_acceso_bases_datos.md` y base MCP de empleados.",
         ]
@@ -454,7 +591,6 @@ def _direct_tool_call_for_structured_query(
             (
                 name
                 for name in (
-                    "consultar_empleados_mcp_administrador",
                     "consultar_empleados_mcp_empleado",
                 )
                 if name in tool_names
@@ -465,7 +601,7 @@ def _direct_tool_call_for_structured_query(
             return [
                 {
                     "name": "rag_retrieve_context",
-                    "args": {"query": _last_human_text(messages), "top_k": 2},
+                    "args": {"query": _last_human_text(messages), "top_k": 3},
                     "id": "direct_rag_policy",
                 },
                 {
@@ -478,17 +614,17 @@ def _direct_tool_call_for_structured_query(
     if _is_database_policy_query(user_text) and "rag_retrieve_context" in tool_names:
         return {
             "name": "rag_retrieve_context",
-            "args": {"query": _last_human_text(messages), "top_k": 2},
+            "args": {"query": _last_human_text(messages), "top_k": 3},
             "id": "direct_rag_policy",
         }
 
     salary_terms = ("salario", "sueldo", "mediana salarial", "estadistica salarial")
     if any(term in user_text for term in salary_terms):
-        if "estadisticas_salariales_mcp_administrador" in tool_names:
+        if "rag_retrieve_context" in tool_names:
             return {
-                "name": "estadisticas_salariales_mcp_administrador",
-                "args": filters,
-                "id": "direct_salary_statistics",
+                "name": "rag_retrieve_context",
+                "args": {"query": _last_human_text(messages), "top_k": 3},
+                "id": "direct_employee_manual_query",
             }
 
     if any(term in user_text for term in ("distribucion", "distribui", "porcentaje")):
@@ -496,7 +632,6 @@ def _direct_tool_call_for_structured_query(
             (
                 name
                 for name in (
-                    "distribucion_empleados_mcp_administrador",
                     "distribucion_empleados_mcp_empleado",
                 )
                 if name in tool_names
@@ -519,12 +654,10 @@ def _direct_tool_call_for_structured_query(
     if "empleado" in user_text:
         preferred_tools = (
             (
-                "contar_empleados_mcp_administrador",
                 "contar_empleados_mcp_empleado",
             )
             if _is_count_query(user_text)
             else (
-                "consultar_empleados_mcp_administrador",
                 "consultar_empleados_mcp_empleado",
             )
         )
@@ -541,7 +674,6 @@ def _direct_tool_call_for_structured_query(
                 (
                     name
                     for name in (
-                        "consultar_empleados_mcp_administrador",
                         "consultar_empleados_mcp_empleado",
                     )
                     if name in tool_names
@@ -553,6 +685,12 @@ def _direct_tool_call_for_structured_query(
                 "name": employee_tool,
                 "args": filters,
                 "id": "direct_empleados_query",
+            }
+        if "rag_retrieve_context" in tool_names:
+            return {
+                "name": "rag_retrieve_context",
+                "args": {"query": _last_human_text(messages), "top_k": 3},
+                "id": "direct_employee_manual_query",
             }
         return {
             "name": "",
@@ -578,6 +716,22 @@ def invoke_specialist_agent(
     tools: List[Any] | None = None,
 ) -> Dict[str, List[BaseMessage]]:
     """Run one specialist agent - EL LLM SIEMPRE TIENE LA ÚLTIMA PALABRA."""
+
+    if _is_manual_only_agent(tools) and _is_ambiguous_personal_data_update(
+        _last_human_text(messages)
+    ):
+        return {
+            "messages": [
+                AIMessage(
+                    content=(
+                        "¿Qué datos querés actualizar: domicilio, grupo familiar, "
+                        "estudios, foto de perfil, contraseña o cuenta bancaria? "
+                        "El manual de empleados documenta procedimientos diferentes "
+                        "para cada caso."
+                    )
+                )
+            ]
+        }
 
     # ──────────────────────────────────────────────────────────
     # 1. PREPARAR EL MODELO
@@ -621,6 +775,12 @@ def invoke_specialist_agent(
     # aplica la política y genera la llamada obligatoria.
     if not tool_calls and tools:
         direct_call = _direct_tool_call_for_structured_query(messages, tools)
+        if not direct_call and _is_manual_only_agent(tools):
+            direct_call = {
+                "name": "rag_retrieve_context",
+                "args": {"query": _last_human_text(messages), "top_k": 3},
+                "id": "direct_employee_manual_query",
+            }
         if direct_call:
             if isinstance(direct_call, dict) and direct_call.get("error"):
                 return {
@@ -675,7 +835,8 @@ def invoke_specialist_agent(
             result = safe_json({"error": f"Error ejecutando tool {call_name}: {exc}"})
 
         result_content = result if isinstance(result, str) else safe_json(result)
-        result_content = _truncate_tool_result_if_needed(result_content)
+        if call_name != "rag_retrieve_context":
+            result_content = _truncate_tool_result_if_needed(result_content)
 
         tool_messages.append(
             ToolMessage(
@@ -689,6 +850,19 @@ def invoke_specialist_agent(
     # ──────────────────────────────────────────────────────────
     if tool_messages:
         new_messages.extend(tool_messages)
+
+        if _rag_context_is_empty(tool_messages):
+            new_messages.append(
+                AIMessage(
+                    content="No encontré esa información en el manual de empleados."
+                )
+            )
+            return {"messages": _ensure_valid_response(new_messages)}
+
+        if _is_manual_only_agent(tools):
+            context = _rag_context_text(tool_messages)
+            new_messages.append(AIMessage(content=_grounded_context_fallback(context)))
+            return {"messages": _ensure_valid_response(new_messages)}
         
         full_messages = prepared_messages + [first_ai] + tool_messages
         
@@ -751,6 +925,14 @@ def invoke_specialist_agent(
                 user_text=_last_human_text(messages),
             )
             final_ai = AIMessage(content=fallback_content)
+        elif _is_manual_only_agent(tools) and not _response_is_grounded(
+            final_content,
+            _rag_context_text(tool_messages),
+        ):
+            logger.warning("Respuesta descartada por contener información sin respaldo RAG")
+            final_ai = AIMessage(
+                content=_grounded_context_fallback(_rag_context_text(tool_messages))
+            )
         else:
             logger.info(f"✅ LLM generó respuesta válida: {final_content[:100]}...")
         

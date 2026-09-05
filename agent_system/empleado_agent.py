@@ -12,35 +12,15 @@ from agent_system.retrieval_policy import enabled_tools
 from agent_system.runtime import invoke_specialist_agent
 from agent_system.state import AgentState
 from agent_system.tools import (
-    combinar_politica_con_area_empleado,
-    consultar_empleados_mcp_empleado,
-    consultar_politica_aplicable,
-    contar_empleados_mcp_empleado,
-    distribucion_empleados_mcp_empleado,
-    knowledge_retrieve_context,
     rag_retrieve_context,
     verificar_respuesta_con_fuentes,
-)
-from agent_system.web_tools import (
-    primary_retrieve_context,
-    web_retrieve_allowed_url,
-    web_search_allowed,
 )
 
 logger = logging.getLogger("agente_corporativo.agent_system.empleado_agent")
 
 EMPLEADO_TOOLS = enabled_tools([
     rag_retrieve_context,
-    knowledge_retrieve_context,
-    consultar_empleados_mcp_empleado,
-    contar_empleados_mcp_empleado,
-    distribucion_empleados_mcp_empleado,
-    consultar_politica_aplicable,
-    combinar_politica_con_area_empleado,
     verificar_respuesta_con_fuentes,
-    primary_retrieve_context,
-    web_search_allowed,
-    web_retrieve_allowed_url,
 ])
 
 

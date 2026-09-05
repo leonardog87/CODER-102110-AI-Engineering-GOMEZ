@@ -41,15 +41,10 @@ LOCAL_TOOL_NAMES = frozenset(
         "rag_retrieve_context",
         "knowledge_retrieve_context",
         "consultar_empleados_mcp_empleado",
-        "consultar_empleados_mcp_administrador",
         "contar_empleados_mcp_empleado",
-        "contar_empleados_mcp_administrador",
         "distribucion_empleados_mcp_empleado",
-        "distribucion_empleados_mcp_administrador",
-        "estadisticas_salariales_mcp_administrador",
         "consultar_politica_aplicable",
         "combinar_politica_con_area_empleado",
-        "combinar_politica_con_area_administrador",
         "verificar_respuesta_con_fuentes",
     }
 )
@@ -75,9 +70,9 @@ LOCAL_ONLY_PROMPT = """
 
 🔒 **POLÍTICA DE FUENTES:**
 - La búsqueda web externa está desactivada.
-- Usá únicamente los manuales vectorizados mediante las herramientas RAG autorizadas y la base SQLite mediante las herramientas de empleados autorizadas para el rol.
+- Usá únicamente las fuentes y herramientas explícitamente autorizadas para el rol activo.
 - Nunca consultes Internet, buscadores, sitios externos ni conocimiento recuperado fuera de esas fuentes.
-- Si los manuales vectorizados y SQLite no contienen la respuesta, indicá esa limitación con claridad; no completes la respuesta con información externa.
+- Si las fuentes autorizadas no contienen la respuesta, indicá esa limitación con claridad; no completes la respuesta con información externa.
 """.strip()
 
 

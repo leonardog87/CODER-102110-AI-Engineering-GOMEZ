@@ -6,9 +6,7 @@ import logging
 
 from langgraph.graph import END, START, StateGraph
 
-from agent_system.administrador_agent import agente_administrador
 from agent_system.constants import (
-    AGENT_ADMINISTRADOR,
     AGENT_EMPLEADO,
     AGENT_INVITADO,
     AGENT_MANAGER,
@@ -29,7 +27,6 @@ builder = StateGraph(AgentState)
 builder.add_node(AGENT_MANAGER, agente_encargado)
 builder.add_node(AGENT_INVITADO, agente_invitado)
 builder.add_node(AGENT_EMPLEADO, agente_empleado)
-builder.add_node(AGENT_ADMINISTRADOR, agente_administrador)
 builder.add_node("evaluador_respuesta", evaluar_respuesta)
 
 builder.add_edge(START, AGENT_MANAGER)
@@ -39,13 +36,11 @@ builder.add_conditional_edges(
     {
         AGENT_INVITADO: AGENT_INVITADO,
         AGENT_EMPLEADO: AGENT_EMPLEADO,
-        AGENT_ADMINISTRADOR: AGENT_ADMINISTRADOR,
     },
 )
 
 builder.add_edge(AGENT_INVITADO, "evaluador_respuesta")
 builder.add_edge(AGENT_EMPLEADO, "evaluador_respuesta")
-builder.add_edge(AGENT_ADMINISTRADOR, "evaluador_respuesta")
 builder.add_conditional_edges(
     "evaluador_respuesta",
     enrutar_despues_evaluacion,

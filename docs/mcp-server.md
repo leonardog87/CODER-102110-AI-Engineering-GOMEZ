@@ -10,11 +10,9 @@ enviados por el cliente:
 
 - `Invitado`: solo descubre `consultar_permisos`.
 - `Empleado`: descubre consulta, conteo y distribución, siempre sin salarios.
-- `Administrador`: añade estadísticas salariales exactas.
 
 Para una instalación remota, cada rol debe ejecutarse como una instancia
 independiente y protegerse en el proxy o plataforma de identidad. No se debe
-publicar una instancia Administrador sin autenticación de infraestructura.
 
 ## Transporte stdio
 
@@ -45,7 +43,6 @@ La aplicación puede consumir una instancia HTTP configurando:
 
 ```env
 AGENT_MCP_EMPLEADO_URL=http://127.0.0.1:8000/mcp
-AGENT_MCP_ADMINISTRADOR_URL=http://127.0.0.1:8001/mcp
 ```
 
 Sin esas variables, utiliza automáticamente un servidor local por `stdio`.
@@ -56,8 +53,6 @@ Sin esas variables, utiliza automáticamente un servidor local por `stdio`.
 - `consultar_empleados`: filtros por DNI, nombre, apellido, área y puesto.
 - `contar_empleados`: conteo exacto por área o puesto.
 - `distribucion_empleados`: cantidades y porcentajes agrupados por área/puesto.
-- `estadisticas_salariales`: promedio, mediana, mínimo, máximo y suma; sólo
-  Administrador.
 - `schema://empleados`: esquema visible según el rol.
 
 El parámetro `limit` admite de 1 a 100 resultados.

@@ -13,24 +13,21 @@ from data_access.service import (
     mcp_count_employees,
     mcp_employee_distribution,
     mcp_execute_query,
-    mcp_salary_statistics,
 )
 
-McpRole = Literal["Invitado", "Empleado", "Administrador"]
-ALLOWED_MCP_ROLES = {"Invitado", "Empleado", "Administrador"}
+McpRole = Literal["Invitado", "Empleado"]
+ALLOWED_MCP_ROLES = {"Invitado", "Empleado"}
 
 
 def normalize_role(role: str) -> McpRole:
     aliases = {
         "invitado": "Invitado",
         "empleado": "Empleado",
-        "administrador": "Administrador",
-        "admin": "Administrador",
     }
     normalized = aliases.get(str(role).strip().lower())
     if normalized not in ALLOWED_MCP_ROLES:
         raise ValueError(
-            "Rol MCP inválido. Use Invitado, Empleado o Administrador."
+            "Rol MCP inválido. Use Invitado o Empleado."
         )
     return normalized  # type: ignore[return-value]
 
@@ -67,8 +64,6 @@ def create_mcp_server(
             access = "Sin acceso a la base SQLite de empleados."
         elif authorized_role == "Empleado":
             access = "Empleados sin Sueldo_ARS ni estadísticas salariales."
-        else:
-            access = "Acceso completo a empleados, salarios y estadísticas."
         return {"role": authorized_role, "sqlite_access": access}
 
     @server.resource(
@@ -79,18 +74,13 @@ def create_mcp_server(
     )
     def esquema_empleados() -> Dict[str, Any]:
         base_fields = ["DNI", "Apellido", "Nombre", "Area", "Puesto"]
-        fields = (
-            [*base_fields, "Sueldo_ARS"]
-            if authorized_role == "Administrador"
-            else base_fields
-        )
         return {
             "role": authorized_role,
             "accessible": authorized_role != "Invitado",
-            "fields": fields if authorized_role != "Invitado" else [],
+            "fields": base_fields if authorized_role != "Invitado" else [],
         }
 
-    if authorized_role in {"Empleado", "Administrador"}:
+    if authorized_role == "Empleado":
 
         @server.tool(
             name="contar_empleados",
@@ -133,7 +123,7 @@ def create_mcp_server(
             name="consultar_empleados",
             description=(
                 "Consulta empleados por campos autorizados. "
-                "El rol Empleado nunca recibe salarios; Administrador sí."
+                "El rol Empleado nunca recibe salarios ni estadísticas salariales."
             ),
             structured_output=True,
         )
@@ -163,27 +153,6 @@ def create_mcp_server(
                 limit=limit,
             )
 
-        if authorized_role == "Administrador":
-
-            @server.tool(
-                name="estadisticas_salariales",
-                description=(
-                    "Calcula cantidad, promedio, mediana, mínimo, máximo y suma "
-                    "salarial con filtros opcionales."
-                ),
-                structured_output=True,
-            )
-            def estadisticas_salariales(
-                area: str | None = None,
-                puesto: str | None = None,
-            ) -> Dict[str, Any]:
-                filtros = {
-                    key: value
-                    for key, value in {"Area": area, "Puesto": puesto}.items()
-                    if value is not None and str(value).strip()
-                }
-                return mcp_salary_statistics(filtros, authorized_role)
-
     return server
 
 
@@ -194,7 +163,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--role",
         default=os.getenv("AGENT_MCP_ROLE", "Invitado"),
-        help="Rol fijo de la instancia: Invitado, Empleado o Administrador.",
+        help="Rol fijo de la instancia: Invitado o Empleado.",
     )
     parser.add_argument(
         "--transport",

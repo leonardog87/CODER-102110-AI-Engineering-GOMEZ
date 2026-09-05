@@ -28,7 +28,6 @@ DEFAULT_DATASET = "agente-corporativo-ia-trajectory"
 EXPECTED_AGENT_BY_ROLE = {
     "Invitado": "agente_invitado",
     "Empleado": "agente_empleado",
-    "Administrador": "agente_administrador",
 }
 
 TRAJECTORY_CORRECTNESS_PROMPT = """You are an expert evaluator of AI agent trajectories.
@@ -96,9 +95,9 @@ def _messages_from_inputs(inputs: Mapping[str, Any]) -> list[BaseMessage]:
 def run_agent_for_evaluation(inputs: Mapping[str, Any]) -> dict[str, Any]:
     """LangSmith target: execute the graph and preserve its full trajectory."""
     role = str(inputs.get("rol_usuario", "Invitado"))
-    if role not in {"Invitado", "Empleado", "Administrador"}:
+    if role not in {"Invitado", "Empleado"}:
         raise ValueError(
-            "'rol_usuario' debe ser Invitado, Empleado o Administrador."
+            "'rol_usuario' debe ser Invitado o Empleado."
         )
 
     result = app_graph.invoke(

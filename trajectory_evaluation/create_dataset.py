@@ -39,7 +39,7 @@ EXAMPLES = [
     },
     {
         "question": "Listá los empleados del área de Desarrollo.",
-        "rol_usuario": "Administrador",
+        "rol_usuario": "Empleado",
     },
 ]
 

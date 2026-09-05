@@ -14,7 +14,6 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from data_access.service import (
     mcp_count_employees,
     mcp_employee_distribution,
-    mcp_salary_statistics,
 )
 
 
@@ -22,9 +21,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "operation",
-        choices=("count", "distribution", "salary"),
+        choices=("count", "distribution"),
     )
-    parser.add_argument("--role", choices=("Empleado", "Administrador"), default="Empleado")
+    parser.add_argument("--role", choices=("Empleado",), default="Empleado")
     parser.add_argument("--area")
     parser.add_argument("--puesto")
     parser.add_argument("--group-by", choices=("area", "puesto"), default="area")
@@ -42,8 +41,6 @@ def main() -> int:
         result = mcp_count_employees(filters, args.role)
     elif args.operation == "distribution":
         result = mcp_employee_distribution(args.group_by, filters, args.role)
-    else:
-        result = mcp_salary_statistics(filters, args.role)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["status"] == "ok" else 1
 

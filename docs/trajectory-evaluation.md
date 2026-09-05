@@ -39,7 +39,7 @@ Los ejemplos usan este formato de entrada:
   "messages": [
     {"role": "user", "content": "¿Cuántos empleados hay?"}
   ],
-  "rol_usuario": "Administrador"
+  "rol_usuario": "Empleado"
 }
 ```
 

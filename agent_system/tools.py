@@ -145,19 +145,6 @@ def contar_empleados_mcp_empleado(
     )
 
 
-@tool("contar_empleados_mcp_administrador")
-def contar_empleados_mcp_administrador(
-    area: str | None = None,
-    puesto: str | None = None,
-) -> str:
-    """Cuenta empleados por área o puesto sobre el conjunto completo."""
-    return _call_employee_analytics(
-        role="Administrador",
-        tool_name="contar_empleados",
-        arguments=_employee_filters(area=area, puesto=puesto),
-    )
-
-
 @tool("distribucion_empleados_mcp_empleado")
 def distribucion_empleados_mcp_empleado(
     group_by: str = "area",
@@ -172,36 +159,6 @@ def distribucion_empleados_mcp_empleado(
             "group_by": group_by,
             **_employee_filters(area=area, puesto=puesto),
         },
-    )
-
-
-@tool("distribucion_empleados_mcp_administrador")
-def distribucion_empleados_mcp_administrador(
-    group_by: str = "area",
-    area: str | None = None,
-    puesto: str | None = None,
-) -> str:
-    """Agrupa empleados por área o puesto con cantidades y porcentajes."""
-    return _call_employee_analytics(
-        role="Administrador",
-        tool_name="distribucion_empleados",
-        arguments={
-            "group_by": group_by,
-            **_employee_filters(area=area, puesto=puesto),
-        },
-    )
-
-
-@tool("estadisticas_salariales_mcp_administrador")
-def estadisticas_salariales_mcp_administrador(
-    area: str | None = None,
-    puesto: str | None = None,
-) -> str:
-    """Calcula estadísticas salariales exactas; sólo para Administrador."""
-    return _call_employee_analytics(
-        role="Administrador",
-        tool_name="estadisticas_salariales",
-        arguments=_employee_filters(area=area, puesto=puesto),
     )
 
 
@@ -231,16 +188,6 @@ def _combine_policy_and_area(*, role: str, politica: str, area: str) -> str:
 def combinar_politica_con_area_empleado(politica: str, area: str) -> str:
     """Combina una política con datos no salariales de un área."""
     return _combine_policy_and_area(role="Empleado", politica=politica, area=area)
-
-
-@tool("combinar_politica_con_area_administrador")
-def combinar_politica_con_area_administrador(politica: str, area: str) -> str:
-    """Combina una política con los datos autorizados de un área."""
-    return _combine_policy_and_area(
-        role="Administrador",
-        politica=politica,
-        area=area,
-    )
 
 
 @tool("verificar_respuesta_con_fuentes")
@@ -299,28 +246,3 @@ def consultar_empleados_mcp_empleado(
     )
 
 
-@tool("consultar_empleados_mcp_administrador")
-def consultar_empleados_mcp_administrador(
-    dni: str | None = None,
-    nombre: str | None = None,
-    apellido: str | None = None,
-    area: str | None = None,
-    puesto: str | None = None,
-) -> str:
-    """Consulta completa de empleados, incluidos salarios y estadísticas.
-    
-    Args:
-        dni: Filtrar por DNI (opcional)
-        nombre: Filtrar por nombre (opcional)
-        apellido: Filtrar por apellido (opcional)
-        area: Filtrar por área (opcional)
-        puesto: Filtrar por puesto (opcional)
-    """
-    return _consultar_empleados(
-        agente_rol="Administrador",
-        dni=dni,
-        nombre=nombre,
-        apellido=apellido,
-        area=area,
-        puesto=puesto,
-    )

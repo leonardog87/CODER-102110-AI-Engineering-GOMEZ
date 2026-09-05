@@ -42,8 +42,6 @@ Manager determinista basado en rol
   +-- Empleado --------> RAG general + RAG complejo
   |                       + MCP Empleado -> SQLite sin salarios
   |
-  +-- Administrador ---> RAG general + RAG complejo
-                          + MCP Administrador -> SQLite completo
   |
   v
 Evaluador de respuesta
@@ -60,8 +58,8 @@ Persistencia ------------> SQLite + dos colecciones Chroma
 1. Streamlit recibe la consulta y el rol de la sesión.
 2. `AgentState` conserva mensajes, rol, agente designado, motivo de selección y
    estado de evaluación.
-3. El manager selecciona de forma determinista al agente Invitado, Empleado o
-   Administrador. El texto del usuario no puede elevar sus permisos.
+3. El manager selecciona de forma determinista al agente Invitado o Empleado.
+   El texto del usuario no puede elevar sus permisos.
 4. El especialista utiliza únicamente las herramientas habilitadas para su rol.
 5. El runtime invoca el modelo configurado y procesa llamadas de herramientas
    nativas o expresadas como JSON por modelos sin soporte nativo.
@@ -78,7 +76,6 @@ Persistencia ------------> SQLite + dos colecciones Chroma
 |---|---:|---:|---|
 | Invitado | Sí | No | No |
 | Empleado | Sí | Sí | Sí, sin salarios ni estadísticas salariales |
-| Administrador | Sí | Sí | Sí, acceso completo |
 
 El manager de `agent_system/manager_agent.py` no utiliza un LLM para autorizar:
 lee `rol_usuario` del estado confiable y asigna un especialista. Cada instancia
@@ -118,9 +115,7 @@ fragmento y score heurístico.
 - SSE por compatibilidad.
 
 Sin URLs MCP configuradas, el cliente inicia automáticamente un servidor local
-por `stdio`. En modo remoto se configura una URL independiente para Empleado y
-Administrador. Las instancias administrativas deben permanecer en una red
-privada y estar protegidas por autenticación de infraestructura.
+por `stdio`. En modo remoto se configura una URL para Empleado.
 
 SQLite contiene la tabla permitida `empleados`. La capa `data_access/` valida
 consultas, aplica filtros, limita resultados, elimina campos no autorizados y
@@ -130,7 +125,6 @@ Las operaciones deterministas se publican como tools especializadas:
 
 - conteo total filtrado, sin depender del tamaño de una muestra;
 - distribución por área o puesto con porcentajes;
-- estadísticas salariales completas, exclusivas del Administrador;
 - recuperación de políticas aplicables y combinación con datos de un área;
 - verificación léxica del respaldo de una respuesta contra sus fuentes.
 

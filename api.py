@@ -14,7 +14,7 @@ from agent_system import app_graph
 from data_access.query_history import load_query_history, save_query_record
 
 
-UserRole = Literal["Invitado", "Empleado", "Administrador"]
+UserRole = Literal["Invitado", "Empleado"]
 
 
 class ChatMessage(BaseModel):

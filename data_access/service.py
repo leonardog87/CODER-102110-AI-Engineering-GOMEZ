@@ -38,7 +38,6 @@ __all__ = [
     "mcp_count_employees",
     "mcp_employee_distribution",
     "preview_table",
-    "mcp_salary_statistics",
 ]
 
 
@@ -111,7 +110,7 @@ def mcp_execute_query(
     Args:
         tabla: "empleados".
         filtros: Diccionario con filtros para la consulta.
-        agente_rol: "Empleado" o "Administrador".
+        agente_rol: "Empleado".
     """
     try:
         logger.info("[MCP] tabla=%s, filtros=%s, rol=%s", tabla, filtros, agente_rol)
@@ -141,15 +140,6 @@ def mcp_execute_query(
                 filtros=filtros,
                 include_stats=False,
                 hide_salaries=True,
-                limit=safe_limit,
-            )
-
-        if role == "Administrador":
-            return _run_role_query(
-                tabla=tabla,
-                filtros=filtros,
-                include_stats=True,
-                hide_salaries=False,
                 limit=safe_limit,
             )
 
@@ -187,7 +177,7 @@ def mcp_execute_query(
 
 def mcp_count_employees(filtros: dict, agente_rol: str) -> dict:
     """Cuenta empleados usando todos los registros, no una muestra."""
-    if str(agente_rol).strip() not in {"Empleado", "Administrador"}:
+    if str(agente_rol).strip() != "Empleado":
         return response(403, "forbidden", [], "Rol no autorizado.")
     try:
         safe_filters = _normalize_employee_filters(filtros or {})
@@ -202,30 +192,13 @@ def mcp_count_employees(filtros: dict, agente_rol: str) -> dict:
         return response(400, "bad_request", [], str(exc))
 
 
-def mcp_salary_statistics(filtros: dict, agente_rol: str) -> dict:
-    """Calcula estadísticas salariales; disponible sólo para Administrador."""
-    if str(agente_rol).strip() != "Administrador":
-        return response(
-            status_code=403,
-            status="forbidden",
-            message="El rol no tiene autorización para estadísticas salariales.",
-            data=[],
-        )
-    try:
-        safe_filters = _normalize_employee_filters(filtros or {})
-        data = get_salary_statistics(get_connection(), safe_filters)
-        return response(200, "ok", data, "Estadísticas salariales calculadas.")
-    except (sqlite3.Error, ValueError) as exc:
-        return response(400, "bad_request", [], str(exc))
-
-
 def mcp_employee_distribution(
     group_by: str,
     filtros: dict,
     agente_rol: str,
 ) -> dict:
     """Distribuye empleados por área o puesto sin exponer salarios."""
-    if str(agente_rol).strip() not in {"Empleado", "Administrador"}:
+    if str(agente_rol).strip() != "Empleado":
         return response(403, "forbidden", [], "Rol no autorizado.")
     try:
         safe_filters = _normalize_employee_filters(filtros or {})

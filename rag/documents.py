@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import List
@@ -61,6 +62,20 @@ def _read_text(path: Path) -> List[Document]:
     text = path.read_text(encoding="utf-8-sig").strip()
     if not text:
         return []
+    if path.suffix.lower() == ".md":
+        sections = re.split(r"(?=^###\s+)", text, flags=re.MULTILINE)
+        return [
+            Document(
+                page_content=section.strip(),
+                metadata={
+                    **_base_metadata(path),
+                    "page": 1,
+                    "section_index": section_index,
+                },
+            )
+            for section_index, section in enumerate(sections, start=1)
+            if section.strip()
+        ]
     return [
         Document(
             page_content=text,
@@ -101,7 +116,8 @@ def get_chunked_documents() -> List[Document]:
             start=1,
         ):
             source_key = (
-                f"{document.metadata['source']}:{document.metadata['page']}:{chunk_index}"
+                f"{document.metadata['source']}:{document.metadata['page']}:"
+                f"{document.metadata.get('section_index', 0)}:{chunk_index}"
             )
             chunk.metadata = {
                 **chunk.metadata,

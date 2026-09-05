@@ -49,9 +49,7 @@ async def check_role(role: str) -> None:
             schema = json.loads(resource_result.contents[0].text)
             assert schema["role"] == role
             assert schema["accessible"] is (role != "Invitado")
-            assert ("Sueldo_ARS" in schema["fields"]) is (
-                role == "Administrador"
-            )
+            assert "Sueldo_ARS" not in schema["fields"]
 
             if role == "Invitado":
                 assert "consultar_empleados" not in tools
@@ -63,10 +61,7 @@ async def check_role(role: str) -> None:
             assert "consultar_empleados" in tools
             assert "contar_empleados" in tools
             assert "distribucion_empleados" in tools
-            if role == "Administrador":
-                assert "estadisticas_salariales" in tools
-            else:
-                assert "estadisticas_salariales" not in tools
+            assert "estadisticas_salariales" not in tools
             result = await session.call_tool(
                 "consultar_empleados",
                 {"area": "Infraestructura", "limit": 20},
@@ -76,10 +71,6 @@ async def check_role(role: str) -> None:
             if role == "Empleado":
                 assert "Sueldo_ARS" not in payload
                 assert "promedio_sueldo" not in payload
-            else:
-                assert "Sueldo_ARS" in payload
-                assert "promedio_sueldo" in payload
-
             count_result = await session.call_tool(
                 "contar_empleados",
                 {"puesto": "desarrolladores"},
@@ -94,24 +85,15 @@ async def check_role(role: str) -> None:
             assert distribution["total"] == 20
             assert sum(group["cantidad"] for group in distribution["groups"]) == 20
 
-            if role == "Administrador":
-                salary_result = await session.call_tool(
-                    "estadisticas_salariales",
-                    {"area": "Infraestructura"},
-                )
-                salary = salary_result.structuredContent["result"]["data"]
-                assert salary["total"] == 3
-                assert salary["mediana"] == 4100000
 
 
 async def main() -> None:
-    for role in ("Invitado", "Empleado", "Administrador"):
+    for role in ("Invitado", "Empleado"):
         await check_role(role)
     print("[OK] Negociación y descubrimiento MCP")
     print("[OK] Permisos y esquema MCP coherentes con cada rol")
     print("[OK] Invitado sin herramienta SQLite")
     print("[OK] Empleado sin información salarial")
-    print("[OK] Administrador con acceso completo")
 
 
 if __name__ == "__main__":

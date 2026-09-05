@@ -19,16 +19,6 @@
         "--transport",
         "stdio"
       ]
-    },
-    "agente-corporativo-administrador": {
-      "command": "python",
-      "args": [
-        "mcp_server.py",
-        "--role",
-        "Administrador",
-        "--transport",
-        "stdio"
-      ]
     }
   }
 }

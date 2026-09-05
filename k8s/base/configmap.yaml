@@ -10,7 +10,6 @@ data:
   OPENAI_MODEL: "qwen/qwen2.5-coder-14b"
   HF_MODEL_ID: ""
   AGENT_MCP_EMPLEADO_URL: ""
-  AGENT_MCP_ADMINISTRADOR_URL: ""
   LANGSMITH_TRAJECTORY_DATASET: "agente-corporativo-ia-trajectory"
   TRAJECTORY_JUDGE_MODEL: ""
   AGENTE_CORPORATIVO_DB: "/app/data/agente_corporativo.sqlite3"

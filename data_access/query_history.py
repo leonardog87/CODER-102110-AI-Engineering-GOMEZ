@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 from data_access.database import get_connection
 
-ALLOWED_HISTORY_ROLES = {"Invitado", "Empleado", "Administrador"}
+ALLOWED_HISTORY_ROLES = {"Invitado", "Empleado"}
 
 
 def _validate_role(role: str) -> str:
@@ -26,7 +26,7 @@ def ensure_query_history_table() -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             role TEXT NOT NULL CHECK (
-                role IN ('Invitado', 'Empleado', 'Administrador')
+                role IN ('Invitado', 'Empleado')
             ),
             agent_name TEXT NOT NULL,
             user_query TEXT NOT NULL,

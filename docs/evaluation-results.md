@@ -9,7 +9,7 @@ Dataset LangSmith:
 - nombre: `agente-corporativo-ia-trajectory`;
 - ID: `94a3895f-c3f4-4d9f-babc-91ab3022f5c2`;
 - casos: 6;
-- cobertura: Invitado, Empleado y Administrador.
+- cobertura: Invitado y Empleado.
 
 Experimento válido:
 

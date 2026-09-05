@@ -8,6 +8,7 @@ El módulo se mantiene como fachada para no romper imports existentes:
 
 from __future__ import annotations
 
+import math
 from typing import Any, Dict, List
 
 from langchain_core.documents import Document
@@ -21,7 +22,7 @@ from rag.config import (
     EMBEDDING_MODEL_NAME,
 )
 from rag.documents import get_chunked_documents, load_complex_documents
-from rag.ranking import rerank_documents
+from rag.ranking import _tokenize, rerank_documents
 from rag.vector_store import get_embeddings, get_vector_store
 
 __all__ = [
@@ -46,16 +47,90 @@ def _get_ranked_documents(query: str, top_k: int) -> List[tuple[Document, float]
         clean_query,
         k=candidate_k,
     )
-    relevant = [
+    query_tokens = set(_tokenize(clean_query))
+    query_tokens = {
+        token
+        for token in query_tokens
+        if not any(
+            token != other and other.startswith(token)
+            for other in query_tokens
+        )
+    }
+    lexical_candidates = [
         (document, float(score))
         for document, score in candidates
-        if float(score) >= COMPLEX_RELEVANCE_THRESHOLD
+        if query_tokens & set(_tokenize(document.page_content))
     ]
-    return rerank_documents(
+    if len(query_tokens) == 1:
+        query_token = next(iter(query_tokens))
+        frequencies = [
+            _tokenize(document.page_content).count(query_token)
+            for document, _score in lexical_candidates
+        ]
+        max_frequency = max(frequencies, default=0)
+        relevant = [
+            item
+            for item, frequency in zip(lexical_candidates, frequencies)
+            if frequency >= max(1, math.ceil(max_frequency * 0.5))
+        ]
+    else:
+        relevant = [
+            item
+            for item in lexical_candidates
+            if len(query_tokens & set(_tokenize(item[0].page_content)))
+            / len(query_tokens)
+            >= 0.5
+        ]
+    ranked = rerank_documents(
         clean_query,
         [document for document, _score in relevant],
         [score for _document, score in relevant],
-    )[:top_k]
+    )
+
+    # La cuota ``top_k`` es un máximo, no una obligación. Sin este filtro se
+    # completaba la cuota con trámites distintos que apenas compartían palabras
+    # genéricas con la consulta.
+    relative_threshold = (
+        ranked[0][1] * 0.65 if ranked else COMPLEX_RELEVANCE_THRESHOLD
+    )
+    effective_threshold = max(COMPLEX_RELEVANCE_THRESHOLD, relative_threshold)
+    anchors = [
+        (document, score)
+        for document, score in ranked
+        if score >= effective_threshold
+    ]
+
+    # Un resultado que cae dentro de una sección Markdown debe aportar la
+    # sección completa. Así no se pierden requisitos ubicados en el chunk
+    # contiguo ni se completa la cuota con otro trámite.
+    all_chunks = get_chunked_documents()
+    selected: List[tuple[Document, float]] = []
+    selected_ids: set[str] = set()
+    for anchor, score in anchors:
+        section_index = anchor.metadata.get("section_index")
+        if section_index is None:
+            siblings = [anchor]
+        else:
+            siblings = sorted(
+                (
+                    chunk
+                    for chunk in all_chunks
+                    if chunk.metadata.get("source") == anchor.metadata.get("source")
+                    and chunk.metadata.get("page") == anchor.metadata.get("page")
+                    and chunk.metadata.get("section_index") == section_index
+                ),
+                key=lambda chunk: int(chunk.metadata.get("chunk_index", 0)),
+            )
+        for sibling in siblings:
+            chunk_id = str(sibling.metadata.get("chunk_id", ""))
+            if chunk_id in selected_ids:
+                continue
+            selected.append((sibling, score))
+            selected_ids.add(chunk_id)
+            if len(selected) >= top_k:
+                return selected
+
+    return selected
 
 
 def retrieve_context(query: str, top_k: int = COMPLEX_RETRIEVAL_TOP_K) -> str:

@@ -65,7 +65,7 @@ def _employee_query_without_tool(state: AgentState) -> bool:
         return False
 
     role = state.get("rol_usuario")
-    if role not in {"Empleado", "Administrador"}:
+    if role != "Empleado":
         return False
     return not any(
         isinstance(message, ToolMessage)

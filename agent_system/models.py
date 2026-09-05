@@ -227,7 +227,6 @@ class OfflineFallbackChatModel:
             (
                 name
                 for name in (
-                    "consultar_empleados_mcp_administrador",
                     "consultar_empleados_mcp_empleado",
                 )
                 if name in tool_names
