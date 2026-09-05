@@ -431,6 +431,65 @@ def _normalize_text(text: str) -> str:
     return text.translate(replacements).lower()
 
 
+def _is_greeting(text: str) -> bool:
+    """Reconoce saludos breves que no requieren recuperar documentación."""
+    normalized = re.sub(r"[^a-z0-9\s]", " ", _normalize_text(text))
+    words = normalized.split()
+    if not words or len(words) > 5:
+        return False
+    greeting_phrases = {
+        "hola",
+        "buen dia",
+        "buenas",
+        "buenas tardes",
+        "buenas noches",
+        "que tal",
+    }
+    return " ".join(words) in greeting_phrases
+
+
+def _is_capabilities_question(text: str) -> bool:
+    """Detecta preguntas sobre la función del asistente, no sobre los manuales."""
+    normalized = re.sub(r"[^a-z0-9\s]", " ", _normalize_text(text))
+    phrase = " ".join(normalized.split())
+    return phrase in {
+        "que haces",
+        "que podes hacer",
+        "que puedes hacer",
+        "como me podes ayudar",
+        "como me puedes ayudar",
+        "en que me podes ayudar",
+        "en que me puedes ayudar",
+    }
+
+
+def _is_social_smalltalk(text: str) -> bool:
+    """Detecta charla social ajena a la función del asistente corporativo."""
+    normalized = re.sub(r"[^a-z0-9\s]", " ", _normalize_text(text))
+    phrase = " ".join(normalized.split())
+    return phrase in {
+        "como va tu dia",
+        "como estuvo tu dia",
+        "como estas",
+        "todo bien",
+        "como te sentis",
+        "como te sientes",
+    }
+
+
+def _capabilities_response(tools: List[Any] | None) -> str:
+    if _is_manual_only_agent(tools):
+        return (
+            "Puedo ayudarte a consultar procedimientos y requisitos del manual "
+            "de empleados. Por ejemplo: actualizar datos, usar el portal, "
+            "consultar haberes, capacitación, asistencia o canales de soporte."
+        )
+    return (
+        "Puedo orientarte sobre el uso general del portal, como registro, ingreso, "
+        "recuperación de contraseña y funciones disponibles para visitantes."
+    )
+
+
 def _is_ambiguous_personal_data_update(text: str) -> bool:
     """Detecta pedidos de actualización que no identifican qué dato cambiar."""
     normalized = _normalize_text(text)
@@ -724,6 +783,32 @@ def invoke_specialist_agent(
     tools: List[Any] | None = None,
 ) -> Dict[str, List[BaseMessage]]:
     """Run one specialist agent - EL LLM SIEMPRE TIENE LA ÚLTIMA PALABRA."""
+
+    if _is_greeting(_last_human_text(messages)):
+        return {
+            "messages": [
+                AIMessage(
+                    content="¡Hola! ¿En qué puedo ayudarte?"
+                )
+            ]
+        }
+
+    if _is_capabilities_question(_last_human_text(messages)):
+        return {
+            "messages": [AIMessage(content=_capabilities_response(tools))]
+        }
+
+    if _is_social_smalltalk(_last_human_text(messages)):
+        return {
+            "messages": [
+                AIMessage(
+                    content=(
+                        "Mi función es asistirte con consultas del portal y la "
+                        "documentación disponible para tu rol. ¿Qué necesitás consultar?"
+                    )
+                )
+            ]
+        }
 
     if _is_manual_only_agent(tools) and _is_ambiguous_personal_data_update(
         _last_human_text(messages)

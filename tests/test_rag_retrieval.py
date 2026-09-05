@@ -15,6 +15,9 @@ from rag.pipeline import retrieve_documents
 from agent_system.manager_agent import agente_encargado
 from agent_system.runtime import (
     _is_ambiguous_personal_data_update,
+    _is_capabilities_question,
+    _is_greeting,
+    _is_social_smalltalk,
     invoke_specialist_agent,
 )
 from agent_system.tools import rag_retrieve_context
@@ -100,6 +103,43 @@ def test_guest_site_audience_query() -> None:
     assert "empleados del ministerio de capital humano" in audience_context
 
 
+def test_greeting_does_not_trigger_rag() -> None:
+    assert _is_greeting("Hola")
+    assert _is_greeting("¡Buenas tardes!")
+    assert not _is_greeting("Hola, quiero cambiar mi domicilio")
+    result = invoke_specialist_agent(
+        system_prompt="",
+        messages=[HumanMessage(content="Hola")],
+        tools=[rag_retrieve_context],
+    )
+    assert result["messages"][-1].content == "¡Hola! ¿En qué puedo ayudarte?"
+
+
+def test_capabilities_question_does_not_trigger_rag() -> None:
+    assert _is_capabilities_question("QUe haces?")
+    assert _is_capabilities_question("¿En qué me podés ayudar?")
+    result = invoke_specialist_agent(
+        system_prompt="",
+        messages=[HumanMessage(content="QUe haces?")],
+        tools=[rag_retrieve_context],
+    )
+    response = result["messages"][-1].content.lower()
+    assert "manual de empleados" in response
+    assert "no encontré" not in response
+
+
+def test_social_smalltalk_stays_in_scope() -> None:
+    assert _is_social_smalltalk("como va tu dia")
+    result = invoke_specialist_agent(
+        system_prompt="",
+        messages=[HumanMessage(content="como va tu dia")],
+        tools=[rag_retrieve_context],
+    )
+    response = result["messages"][-1].content.lower()
+    assert "mi función es asistirte" in response
+    assert "no encontré" not in response
+
+
 def main() -> int:
     password_docs = retrieve_knowledge_documents("¿Cómo recupero mi contraseña?")
     support_docs = retrieve_knowledge_documents("¿Cuál es el teléfono de soporte?")
@@ -151,6 +191,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if "--greeting-only" in sys.argv:
+        test_greeting_does_not_trigger_rag()
+        test_capabilities_question_does_not_trigger_rag()
+        test_social_smalltalk_stays_in_scope()
+        print("[OK] Los saludos no ejecutan RAG")
+        raise SystemExit(0)
     if "--audience-only" in sys.argv:
         test_guest_site_audience_query()
         print("[OK] El rol Invitado recupera el público destinatario del sitio")
