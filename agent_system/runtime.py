@@ -399,11 +399,19 @@ def _response_is_grounded(response: str, context: str) -> bool:
 
 
 def _grounded_context_fallback(context: str) -> str:
-    return (
-        "El manual de empleados contiene esta información relacionada, sin agregar "
-        "pasos que no estén documentados:\n\n"
-        + context.strip()
-    )
+    """Devuelve evidencia legible sin exponer metadatos internos del RAG."""
+    content_lines = []
+    for line in context.splitlines():
+        stripped = line.strip()
+        if (
+            not stripped
+            or stripped == "# Contexto recuperado"
+            or stripped.startswith("## Fragmento ")
+            or re.match(r"^(Fuente|Documento|Chunk|Score heuristico):", stripped)
+        ):
+            continue
+        content_lines.append(line.rstrip())
+    return "\n".join(content_lines).strip()
 
 
 def _is_manual_only_agent(tools: List[Any] | None) -> bool:
@@ -859,11 +867,6 @@ def invoke_specialist_agent(
             )
             return {"messages": _ensure_valid_response(new_messages)}
 
-        if _is_manual_only_agent(tools):
-            context = _rag_context_text(tool_messages)
-            new_messages.append(AIMessage(content=_grounded_context_fallback(context)))
-            return {"messages": _ensure_valid_response(new_messages)}
-        
         full_messages = prepared_messages + [first_ai] + tool_messages
         
         logger.info("🤖 LLM generando respuesta final con resultados...")

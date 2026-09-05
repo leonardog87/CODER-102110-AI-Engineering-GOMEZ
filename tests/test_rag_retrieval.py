@@ -52,6 +52,30 @@ def test_family_context_excludes_unrelated_procedures() -> None:
     assert "cambio de entidad bancaria" not in family_context, family_context
 
 
+def test_profile_photo_excludes_password_change() -> None:
+    photo_docs = retrieve_documents("¿Cómo cambio mi foto de perfil?", top_k=3)
+    photo_context = " ".join(
+        document.page_content.lower() for document in photo_docs
+    )
+    assert photo_docs
+    assert "carga y modificación de la foto de perfil" in photo_context, photo_context
+    assert "cambio de contraseña" not in photo_context, photo_context
+
+
+def test_guarderia_reimbursement_is_retrieved() -> None:
+    guarderia_docs = retrieve_documents(
+        "Como funciona el reintegro por guarderia?",
+        top_k=3,
+    )
+    guarderia_context = " ".join(
+        document.page_content.lower() for document in guarderia_docs
+    )
+    assert guarderia_docs
+    assert "reintegro por guardería" in guarderia_context, guarderia_context
+    assert "trámite de alta del beneficio" in guarderia_context, guarderia_context
+    assert "trámite mensual" in guarderia_context, guarderia_context
+
+
 def test_ambiguous_personal_data_update_requires_clarification() -> None:
     assert _is_ambiguous_personal_data_update("¿Cómo actualizo mis datos?")
     assert not _is_ambiguous_personal_data_update(
@@ -101,6 +125,8 @@ def main() -> int:
     assert "guia_problemas_red.md" in _sources(network_docs)
 
     test_family_context_excludes_unrelated_procedures()
+    test_profile_photo_excludes_password_change()
+    test_guarderia_reimbursement_is_retrieved()
 
     assert not retrieve_documents("familiar", top_k=3)
 

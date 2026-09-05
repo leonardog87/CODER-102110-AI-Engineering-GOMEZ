@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import List, Tuple
 
 from langchain_core.documents import Document
@@ -43,7 +44,13 @@ STOPWORDS = {
 
 
 def _tokenize(text: str) -> List[str]:
-    tokens = re.findall(r"[a-záéíóúñ0-9]+", text.lower())
+    # Las consultas de usuarios suelen omitir tildes. Normalizarlas permite
+    # que "guarderia" coincida con "guardería" y "como" con "cómo".
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    normalized_text = "".join(
+        char for char in decomposed if not unicodedata.combining(char)
+    )
+    tokens = re.findall(r"[a-z0-9]+", normalized_text)
     normalized: List[str] = []
     suffixes = (
         "amiento", "imiento", "aciones", "acion", "mente", "ando", "iendo",

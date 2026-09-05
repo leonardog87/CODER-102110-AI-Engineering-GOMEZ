@@ -56,11 +56,25 @@ def _get_ranked_documents(query: str, top_k: int) -> List[tuple[Document, float]
             for other in query_tokens
         )
     }
-    lexical_candidates = [
-        (document, float(score))
-        for document, score in candidates
-        if query_tokens & set(_tokenize(document.page_content))
-    ]
+    # El embedding aporta candidatos semánticos, pero no debe poder ocultar
+    # coincidencias textuales inequívocas. Se agregan chunks del corpus que
+    # contengan términos de la consulta (p. ej. "reintegro" y "guardería"),
+    # aunque no hayan quedado dentro del top vectorial.
+    lexical_candidates: List[tuple[Document, float]] = []
+    candidate_ids: set[str] = set()
+    for document, score in candidates:
+        if not query_tokens & set(_tokenize(document.page_content)):
+            continue
+        lexical_candidates.append((document, float(score)))
+        candidate_ids.add(str(document.metadata.get("chunk_id", "")))
+
+    for document in get_chunked_documents():
+        chunk_id = str(document.metadata.get("chunk_id", ""))
+        if chunk_id in candidate_ids:
+            continue
+        if query_tokens & set(_tokenize(document.page_content)):
+            lexical_candidates.append((document, 0.0))
+            candidate_ids.add(chunk_id)
     if len(query_tokens) == 1:
         query_token = next(iter(query_tokens))
         frequencies = [
@@ -87,11 +101,33 @@ def _get_ranked_documents(query: str, top_k: int) -> List[tuple[Document, float]
         [score for _document, score in relevant],
     )
 
+    # Cuando una sección coincide con más conceptos de la consulta que las
+    # demás, conservamos solo ese nivel de cobertura. Por ejemplo, "cambiar
+    # foto de perfil" no debe traer "cambiar contraseña" solo porque ambos
+    # trámites parten del mismo menú de perfil.
+    if ranked and len(query_tokens) > 1:
+        overlaps = [
+            len(query_tokens & set(_tokenize(document.page_content)))
+            for document, _score in ranked
+        ]
+        max_overlap = max(overlaps)
+        if max_overlap >= 2:
+            ranked = [
+                item
+                for item, overlap in zip(ranked, overlaps)
+                if overlap == max_overlap
+            ]
+
     # La cuota ``top_k`` es un máximo, no una obligación. Sin este filtro se
     # completaba la cuota con trámites distintos que apenas compartían palabras
     # genéricas con la consulta.
+    # Solo se admiten secciones cuya relevancia sea muy cercana a la mejor.
+    # Un umbral permisivo incluía "Cambio de contraseña" (0.694) junto con
+    # "Foto de perfil" (0.793), porque ambas mencionan el icono de perfil.
+    # Los chunks que completan la sección ganadora se incorporan después como
+    # siblings, por lo que este corte no trunca sus pasos o requisitos.
     relative_threshold = (
-        ranked[0][1] * 0.65 if ranked else COMPLEX_RELEVANCE_THRESHOLD
+        ranked[0][1] * 0.90 if ranked else COMPLEX_RELEVANCE_THRESHOLD
     )
     effective_threshold = max(COMPLEX_RELEVANCE_THRESHOLD, relative_threshold)
     anchors = [
