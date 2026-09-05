@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List
 
 from langchain_core.documents import Document
@@ -18,14 +19,19 @@ from rag.config import (
 )
 from rag.knowledge_documents import get_knowledge_chunks, load_knowledge_documents
 from rag.knowledge_vector_store import get_knowledge_vector_store
-from rag.ranking import rerank_documents
+from rag.ranking import _tokenize, rerank_documents
+
+logger = logging.getLogger("agente_corporativo.rag.knowledge_pipeline")
 
 
 def _expand_common_portal_queries(query: str) -> str:
     """Refuerza preguntas frecuentes aun cuando contengan errores menores."""
-    normalized = query.lower()
-    asks_about_site = "web" in normalized or "portal" in normalized
-    asks_about_audience = "quien" in normalized or "quién" in normalized
+    normalized_tokens = set(_tokenize(query))
+    normalized = " ".join(_tokenize(query))
+    asks_about_site = bool(normalized_tokens & {"web", "portal", "sitio"})
+    asks_about_audience = bool(
+        normalized_tokens & {"quien", "dirigido", "destinado", "creado"}
+    )
     if asks_about_site and asks_about_audience:
         return f"{query} ¿A quién está dirigida o dedicada esta web?"
     if any(term in normalized for term in ("contraseña", "contrasena", "clave")):
@@ -47,15 +53,43 @@ def retrieve_knowledge_documents(
         return []
     retrieval_query = _expand_common_portal_queries(clean_query)
     candidate_k = max(KNOWLEDGE_RETRIEVAL_CANDIDATES, top_k)
-    candidates = get_knowledge_vector_store().similarity_search_with_relevance_scores(
-        retrieval_query,
-        k=candidate_k,
-    )
-    relevant = [
-        (document, float(score))
-        for document, score in candidates
-        if float(score) >= KNOWLEDGE_RELEVANCE_THRESHOLD
-    ]
+    try:
+        candidates = (
+            get_knowledge_vector_store().similarity_search_with_relevance_scores(
+                retrieval_query,
+                k=candidate_k,
+            )
+        )
+    except Exception as exc:
+        logger.warning(
+            "Búsqueda vectorial no disponible; se usará recuperación léxica: %s",
+            exc,
+        )
+        candidates = []
+    query_tokens = set(_tokenize(retrieval_query))
+    lexical_query_tokens = set(_tokenize(clean_query))
+    relevant = []
+    selected_ids: set[str] = set()
+    for document, score in candidates:
+        if float(score) < KNOWLEDGE_RELEVANCE_THRESHOLD:
+            continue
+        relevant.append((document, float(score)))
+        selected_ids.add(str(document.metadata.get("chunk_id", "")))
+
+    # Respaldo léxico para consultas cuya formulación no supera el umbral
+    # vectorial. La normalización compartida tolera tildes omitidas.
+    for document in get_knowledge_chunks():
+        chunk_id = str(document.metadata.get("chunk_id", ""))
+        if chunk_id in selected_ids:
+            continue
+        document_tokens = set(_tokenize(document.page_content))
+        coverage = len(lexical_query_tokens & document_tokens) / max(
+            len(lexical_query_tokens), 1
+        )
+        if coverage < 0.5:
+            continue
+        relevant.append((document, 0.0))
+        selected_ids.add(chunk_id)
     ranked = rerank_documents(
         retrieval_query,
         [document for document, _score in relevant],

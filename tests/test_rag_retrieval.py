@@ -91,10 +91,19 @@ def test_ambiguous_personal_data_update_requires_clarification() -> None:
     assert "No encontré" not in response
 
 
+def test_guest_site_audience_query() -> None:
+    audience_docs = retrieve_knowledge_documents("a quien esta dirigido el sitio?")
+    audience_context = " ".join(
+        document.page_content.lower() for document in audience_docs
+    )
+    assert audience_docs
+    assert "empleados del ministerio de capital humano" in audience_context
+
+
 def main() -> int:
     password_docs = retrieve_knowledge_documents("¿Cómo recupero mi contraseña?")
     support_docs = retrieve_knowledge_documents("¿Cuál es el teléfono de soporte?")
-    audience_docs = retrieve_knowledge_documents("a quien esta dirgida esta web?")
+    audience_docs = retrieve_knowledge_documents("a quien esta dirigido el sitio?")
     registration_docs = retrieve_knowledge_documents("como me registro?")
     capabilities_docs = retrieve_knowledge_documents("que puedo hacer aqui?")
     assert password_docs and len(password_docs) <= 2
@@ -142,6 +151,10 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if "--audience-only" in sys.argv:
+        test_guest_site_audience_query()
+        print("[OK] El rol Invitado recupera el público destinatario del sitio")
+        raise SystemExit(0)
     if "--ambiguity-only" in sys.argv:
         test_ambiguous_personal_data_update_requires_clarification()
         print("[OK] Las actualizaciones ambiguas solicitan precisión")
