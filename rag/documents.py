@@ -63,7 +63,11 @@ def _read_text(path: Path) -> List[Document]:
     if not text:
         return []
     if path.suffix.lower() == ".md":
-        sections = re.split(r"(?=^###\s+)", text, flags=re.MULTILINE)
+        # Tanto los encabezados de área (##) como los de trámite (###)
+        # delimitan temas independientes. Si solo se separan los ``###``, el
+        # último trámite de un área absorbe el ``##`` siguiente y el RAG puede
+        # devolver información ajena como si perteneciera al mismo trámite.
+        sections = re.split(r"(?=^#{2,3}\s+)", text, flags=re.MULTILINE)
         return [
             Document(
                 page_content=section.strip(),

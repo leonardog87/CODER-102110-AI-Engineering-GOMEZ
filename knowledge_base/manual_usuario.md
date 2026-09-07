@@ -52,7 +52,7 @@ Si aún no tenés usuario, podés registrarte fácilmente:
 
 > **Importante:** El registro en el portal permite acceder al sistema, pero **no garantiza por sí mismo permisos para consultar información sensible ni utilizar funciones internas**. El nivel de acceso depende del rol asignado, la autenticación y la autorización del sistema.
 >
-> En particular, **los empleados del Ministerio** pueden acceder a su documentación laboral y personal según su perfil autorizado, incluyendo su **historial de licencias**, **licencias tomadas**, **licencias disponibles** y el estado de cada solicitud. Sin embargo, **no pueden ver licencias, datos salariales ni información de otros empleados** sin la autorización correspondiente.
+> En particular, **los empleados del Ministerio** pueden acceder a su documentación laboral y personal según su perfil autorizado, incluyendo su **historial de licencias**, **licencias tomadas**, **licencias disponibles** y el estado de cada solicitud. Sin embargo, **no pueden ver datos salariales ni información de otros empleados** sin la autorización correspondiente.
 >
 > Un usuario no autenticado o con rol limitado solo podrá consultar información pública o de uso general.
 >

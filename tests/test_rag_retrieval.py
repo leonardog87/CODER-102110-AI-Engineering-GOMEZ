@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 from langchain_core.messages import HumanMessage
 
@@ -11,6 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from rag.knowledge_pipeline import retrieve_knowledge_documents
+from rag.documents import get_chunked_documents
 from rag.pipeline import retrieve_documents
 from agent_system.manager_agent import agente_encargado
 from agent_system.runtime import (
@@ -77,6 +79,27 @@ def test_guarderia_reimbursement_is_retrieved() -> None:
     assert "reintegro por guardería" in guarderia_context, guarderia_context
     assert "trámite de alta del beneficio" in guarderia_context, guarderia_context
     assert "trámite mensual" in guarderia_context, guarderia_context
+
+
+def test_salary_receipt_excludes_unrelated_referral_channels() -> None:
+    corpus = get_chunked_documents()
+    with patch("rag.pipeline.get_vector_store") as vector_store:
+        vector_store.return_value.similarity_search_with_relevance_scores.return_value = [
+            (document, 0.8) for document in corpus
+        ]
+        receipt_docs = retrieve_documents(
+            "¿Cómo puedo consultar mi recibo de sueldo?",
+            top_k=3,
+        )
+    receipt_context = " ".join(
+        document.page_content.lower() for document in receipt_docs
+    )
+    assert receipt_docs
+    assert "recibo" in receipt_context, receipt_context
+    assert "conformar" in receipt_context, receipt_context
+    assert "descargar" in receipt_context, receipt_context
+    assert "canales de consulta y derivación" not in receipt_context, receipt_context
+    assert "menor asignación de días de vacaciones" not in receipt_context, receipt_context
 
 
 def test_ambiguous_personal_data_update_requires_clarification() -> None:
@@ -176,6 +199,7 @@ def main() -> int:
     test_family_context_excludes_unrelated_procedures()
     test_profile_photo_excludes_password_change()
     test_guarderia_reimbursement_is_retrieved()
+    test_salary_receipt_excludes_unrelated_referral_channels()
 
     assert not retrieve_documents("familiar", top_k=3)
 
@@ -208,5 +232,9 @@ if __name__ == "__main__":
     if "--family-only" in sys.argv:
         test_family_context_excludes_unrelated_procedures()
         print("[OK] Grupo familiar recuperado completo y sin trámites ajenos")
+        raise SystemExit(0)
+    if "--receipt-only" in sys.argv:
+        test_salary_receipt_excludes_unrelated_referral_channels()
+        print("[OK] Recibos recuperados sin canales de derivación ajenos")
         raise SystemExit(0)
     raise SystemExit(main())
