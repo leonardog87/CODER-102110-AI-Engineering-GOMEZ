@@ -82,7 +82,7 @@ def invoke_specialist_agent(
     messages: List[BaseMessage],
     tools: List[Any] | None = None,
 ) -> Dict[str, List[BaseMessage]]:
-    """Ejecuta chatBot y procesa hasta tres rondas de herramientas."""
+    """Ejecuta un especialista y procesa rondas acotadas de herramientas."""
     enabled_tools = list(tools or [])
     model = build_chat_model()
     bound_model = model
@@ -98,7 +98,9 @@ def invoke_specialist_agent(
     generated: List[BaseMessage] = []
     all_tool_messages: List[ToolMessage] = []
 
-    for round_index in range(3):
+    # Un proceso real suele necesitar: localizar archivo, leerlo, seguir un
+    # símbolo y recién entonces responder. El límite sigue evitando bucles.
+    for round_index in range(6):
         ai_message = _invoke(bound_model, conversation, enabled_tools)
         native_calls = list(getattr(ai_message, "tool_calls", None) or [])
         tool_calls = native_calls or _text_tool_calls(

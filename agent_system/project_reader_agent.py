@@ -16,6 +16,7 @@ from agent_system.project_index import (
 )
 from agent_system.prompts import SYSTEM_PROMPT_PROJECT_READER
 from agent_system.runtime import invoke_specialist_agent
+from agent_system.repository_tools import REPOSITORY_TOOLS
 from agent_system.state import AgentState
 
 logger = logging.getLogger("chatBot.agent_system.project_reader")
@@ -123,7 +124,9 @@ def projectReader(state: AgentState) -> Dict[str, List[BaseMessage] | str]:
 
     logger.info("Ejecutando projectReader sobre archivos del repositorio")
     prompt = f"{SYSTEM_PROMPT_PROJECT_READER}\n\nCONTEXTO RECUPERADO DEL REPOSITORIO:\n{overview}"
-    generated = invoke_specialist_agent(system_prompt=prompt, messages=messages)["messages"]
+    generated = invoke_specialist_agent(
+        system_prompt=prompt, messages=messages, tools=REPOSITORY_TOOLS
+    )["messages"]
     return {
         "messages": generated,
         "agente_designado": "projectReader",

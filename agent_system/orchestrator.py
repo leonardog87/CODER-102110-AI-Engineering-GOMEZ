@@ -14,6 +14,19 @@ from agent_system.state import AgentState
 logger = logging.getLogger("chatBot.agent_system.orchestrator")
 
 
+_EXPLANATION_REQUEST = re.compile(
+    r"(?:^|[¿?]\s*)"
+    r"(?:explic(?:a|ame|á|áme)|describ(?:e|ime|í|íme)|"
+    r"(?:c[oó]mo|cu[aá]l(?:es)?|qu[eé])\s+(?:es|son|se\s+|puedo\s+)?|"
+    r"(?:proceso|pasos|procedimiento|flujo)\s+(?:de|para))\b"
+)
+
+
+def _is_explanation_request(text: str) -> bool:
+    """Distingue una consulta sobre una acción de una orden para ejecutarla."""
+    return bool(_EXPLANATION_REQUEST.search(text))
+
+
 def _last_user_text(messages: List[BaseMessage]) -> str:
     for message in reversed(messages):
         if getattr(message, "type", None) == "human":
@@ -25,6 +38,16 @@ def route_next_agent(state: AgentState) -> str:
     """Direccionaliza la ejecución según la intención del usuario."""
     context = _last_user_text(state.get("messages", []))
     text = (context or "").lower()
+
+    # "Cómo crear un usuario" menciona una acción, pero no solicita editar el
+    # repositorio. Las consultas explicativas deben resolverse por lectura aun
+    # cuando contengan verbos como crear, modificar o eliminar.
+    if _is_explanation_request(text) and re.search(
+        r"(modific|actualiz|cre(?:a|ar|á)|gener(?:a|ar|á)|implement|agreg|añad|elimin|borr|corrig|cambi|refactor|reemplaz)",
+        text,
+    ):
+        logger.info("Orquestador seleccionó %s para consulta explicativa", AGENT_PROJECT_READER)
+        return AGENT_PROJECT_READER
 
     if re.search(
         r"(modific|actualiz|cre(?:a|ar|á)|gener(?:a|ar|á)|implement|agreg|añad|elimin|borr|corrig|cambi|refactor|reemplaz)",

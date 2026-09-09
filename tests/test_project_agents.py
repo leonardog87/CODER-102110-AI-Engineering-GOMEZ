@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from langchain_core.messages import HumanMessage
 
@@ -15,9 +16,48 @@ from agent_system.code_editor_agent import (
     _resolve_target,
     _safe_target,
 )
+from agent_system.repository_tools import inspect_dom, inspect_file_relationships, inspect_symbol, read_project_file
 
 
 class OrchestratorSelectionTests(unittest.TestCase):
+    def test_read_tool_returns_exact_numbered_lines(self):
+        path = Path.cwd() / "tmp_repository_tool_sample.html"
+        try:
+            path.write_text("uno\ndos\ntres\n", encoding="utf-8")
+            with patch("agent_system.repository_tools._project_root", return_value=Path.cwd()):
+                result = read_project_file.invoke({"path": path.name, "start_line": 2, "end_line": 3})
+            self.assertIn("2: dos", result["content"])
+            self.assertIn("3: tres", result["content"])
+        finally:
+            if path.exists(): path.unlink()
+
+    def test_dom_tool_finds_precise_parent_and_line(self):
+        path = Path.cwd() / "tmp_repository_tool_screen.aspx"
+        try:
+            path.write_text('<form id="main">\n<div class="actions"><button id="save">Guardar</button></div>\n</form>', encoding="utf-8")
+            with patch("agent_system.repository_tools._project_root", return_value=Path.cwd()):
+                result = inspect_dom.invoke({"path": path.name, "selector_or_text": "save"})
+            self.assertEqual(result["matching_elements"], 1)
+            self.assertEqual(result["elements"][0]["parent"], "div.actions")
+            self.assertEqual(result["elements"][0]["line"], 2)
+        finally:
+            if path.exists(): path.unlink()
+
+    def test_relationship_tool_finds_codebehind_and_assets(self):
+        page = Path.cwd() / "tmp_repository_tool_Page.aspx"
+        codebehind = Path(f"{page}.cs")
+        script = page.with_suffix(".js")
+        try:
+            page.write_text('<%@ Page CodeFile="Page.aspx.cs" %><script src="Page.js"></script>', encoding="utf-8")
+            codebehind.write_text("class Page {}", encoding="utf-8")
+            script.write_text("function save() {}", encoding="utf-8")
+            with patch("agent_system.repository_tools._project_root", return_value=Path.cwd()):
+                result = inspect_file_relationships.invoke({"path": page.name})
+            self.assertTrue(any(item.endswith(codebehind.name) for item in result["related_files"]))
+            self.assertTrue(any(item.endswith(script.name) for item in result["related_files"]))
+        finally:
+            for path in (page, codebehind, script):
+                if path.exists(): path.unlink()
     def test_orchestrator_selects_chatbot_for_general_questions(self):
         state = {"messages": [HumanMessage(content="¿Qué servicios ofrece la empresa?")]}
         self.assertEqual(route_next_agent(state), AGENT_CHATBOT)
@@ -36,6 +76,14 @@ class OrchestratorSelectionTests(unittest.TestCase):
 
     def test_orchestrator_does_not_edit_when_asked_about_a_file(self):
         state = {"messages": [HumanMessage(content="Explica el archivo api.py y su función")]}
+        self.assertEqual(route_next_agent(state), AGENT_PROJECT_READER)
+
+    def test_orchestrator_does_not_edit_when_asked_how_to_create_a_user(self):
+        state = {"messages": [HumanMessage(content="Explicame paso a paso como crear un usuario")]}
+        self.assertEqual(route_next_agent(state), AGENT_PROJECT_READER)
+
+    def test_orchestrator_does_not_edit_when_asked_for_creation_process(self):
+        state = {"messages": [HumanMessage(content="¿Cuál es el proceso para crear un usuario?")]}
         self.assertEqual(route_next_agent(state), AGENT_PROJECT_READER)
 
     def test_editor_rejects_paths_outside_repository(self):

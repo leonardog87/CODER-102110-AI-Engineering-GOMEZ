@@ -9,13 +9,14 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
 
-from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage
 
-from agent_system.models import build_chat_model
 from agent_system.project_index import (
     _project_root, expand_related_context, query_project_index,
 )
 from agent_system.prompts import SYSTEM_PROMPT_CODE_EDITOR
+from agent_system.repository_tools import REPOSITORY_TOOLS
+from agent_system.runtime import invoke_specialist_agent
 from agent_system.state import AgentState
 
 logger = logging.getLogger("chatBot.agent_system.code_editor")
@@ -66,6 +67,22 @@ def _decode_plan(content: Any) -> Dict[str, Any]:
                 return value
 
     raise ValueError("el modelo no devolvió JSON válido")
+
+
+def _build_editor_plan(prompt: str, messages: List[BaseMessage]) -> Dict[str, Any]:
+    """Permite que el editor inspeccione el repositorio/DOM antes de emitir el plan."""
+    generated = invoke_specialist_agent(
+        system_prompt=prompt,
+        messages=messages,
+        tools=REPOSITORY_TOOLS,
+    )["messages"]
+    for message in reversed(generated):
+        if isinstance(message, AIMessage) and str(message.content or "").strip():
+            try:
+                return _decode_plan(message.content)
+            except ValueError:
+                continue
+    raise ValueError("el modelo no devolvió un plan JSON después de inspeccionar el proyecto")
 
 
 def _safe_target(root: Path, relative: str) -> Path:
@@ -455,8 +472,7 @@ def codeEditor(state: AgentState) -> Dict[str, Any]:
             }
     else:
         try:
-            response = build_chat_model().invoke([SystemMessage(content=prompt), *messages])
-            plan = _decode_plan(response.content)
+            plan = _build_editor_plan(prompt, messages)
         except Exception as exc:
             logger.warning("No se pudo decodificar el plan JSON del modelo; intentando fallback natural: %s", exc)
             lower = request.lower()
